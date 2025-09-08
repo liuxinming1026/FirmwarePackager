@@ -24,6 +24,10 @@ private slots:
     void buildPackage();
     void openSettings();
     void editMapping();
+    void addFile();
+    void addFolder();
+    void batchEdit();
+    void previewScript();
 
 private:
     void populateTable(const core::Project& project);

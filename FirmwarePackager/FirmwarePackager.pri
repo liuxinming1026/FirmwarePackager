@@ -18,7 +18,8 @@ HEADERS += \
     $$PWD/src/ui/GuiLogger.h \
     $$PWD/src/ui/MainWindow.h \
     $$PWD/src/ui/MappingDialog.h \
-    $$PWD/src/ui/ProjectSettingsDialog.h
+    $$PWD/src/ui/ProjectSettingsDialog.h \
+    $$PWD/src/ui/BatchEditDialog.h
 
 SOURCES += \
     $$PWD/src/core/Hasher.cpp \
@@ -34,7 +35,8 @@ SOURCES += \
     $$PWD/src/ui/GuiLogger.cpp \
     $$PWD/src/ui/MainWindow.cpp \
     $$PWD/src/ui/MappingDialog.cpp \
-    $$PWD/src/ui/ProjectSettingsDialog.cpp
+    $$PWD/src/ui/ProjectSettingsDialog.cpp \
+    $$PWD/src/ui/BatchEditDialog.cpp
 
 # ================= 路径与第三方 =================
 isEmpty(LIBARCHIVE_ROOT): LIBARCHIVE_ROOT = $$PWD/third_party/libarchive
