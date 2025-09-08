@@ -13,8 +13,10 @@ for st in "$STATE_DIR"/*.state; do
     [ -f "$ARCHIVE" ] || continue
     TMP="$(mktemp -d)"
     tar -xzf "$ARCHIVE" -C "$TMP"
-    if [ -f "$TMP/install.sh" ]; then
-        (cd "$TMP" && ./install.sh --resume)
+    if [ -f "$TMP/package/scripts/install.sh" ]; then
+        (
+            cd "$TMP/package" && ./scripts/install.sh --resume
+        )
     fi
     rm -rf "$TMP"
 done
