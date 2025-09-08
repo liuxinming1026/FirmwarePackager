@@ -122,8 +122,9 @@ void MainWindow::buildPackage() {
         QMessageBox::warning(this, "Missing Paths", "Please specify both root and output directories.");
         return;
     }
+    currentProject.rootDir = rootEdit->text().toStdString();
     currentProject.outputDir = outputEdit->text().toStdString();
-    packager->package(rootEdit->text().toStdString(), outputEdit->text().toStdString(), core::Scanner::PathList{});
+    packager->package(currentProject);
 }
 
 void MainWindow::openSettings() {

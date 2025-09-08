@@ -5,6 +5,12 @@
 #include <chrono>
 #include <fstream>
 #include <iomanip>
+#include <cstring>
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
 namespace core {
 
@@ -27,30 +33,56 @@ Project Packager::buildProject(const std::filesystem::path& root, const Scanner:
     return project;
 }
 
-void Packager::package(const std::filesystem::path& root, const std::filesystem::path& outdir, const Scanner::PathList& exclusions) {
+void Packager::package(const Project& project) {
     logger.info("Packaging project");
-    Project project = buildProject(root, exclusions);
-    project.outputDir = outdir;
-    std::filesystem::create_directories(outdir);
+    auto tempRoot = std::filesystem::temp_directory_path() / ("package-" + idGen.generate());
+    std::filesystem::create_directories(tempRoot);
+
+    std::filesystem::path payloadDir = tempRoot / "payload";
+    std::filesystem::path scriptsDir = tempRoot / "scripts";
+    std::filesystem::path metaDir = tempRoot / "META";
+    std::filesystem::create_directories(payloadDir);
+    std::filesystem::create_directories(scriptsDir);
+    std::filesystem::create_directories(metaDir);
+
     for (const auto& f : project.files) {
-        auto src = root / f.path;
-        auto dst = outdir / f.path;
+        auto src = project.rootDir / f.path;
+        auto dst = payloadDir / f.path;
         std::filesystem::create_directories(dst.parent_path());
         std::filesystem::copy_file(src, dst, std::filesystem::copy_options::overwrite_existing);
     }
-    manifest.write(project, outdir / "manifest.tsv");
-    script.write(project, outdir / "scripts");
 
-    std::ofstream pkgInfo(outdir / "pkg.info");
-    pkgInfo << "name=" << project.name << "\n";
+    manifest.write(project, tempRoot / "manifest.tsv");
+    script.write(project, scriptsDir);
 
     auto now = std::chrono::system_clock::now();
     std::time_t t = std::chrono::system_clock::to_time_t(now);
-    std::ofstream buildInfo(outdir / "build.info");
-    buildInfo << "built=" << std::put_time(std::gmtime(&t), "%Y-%m-%dT%H:%M:%SZ") << "\n";
+    std::string pkgId = idGen.generate();
 
-    std::filesystem::path archivePath = outdir.parent_path() / (project.name + ".tar.gz");
-    createArchive(outdir, archivePath);
+    std::ofstream pkgInfo(metaDir / "pkg.info");
+    pkgInfo << "PKG_ID=" << pkgId << "\n";
+    pkgInfo << "PKG_VERSION=" << project.version << "\n";
+    pkgInfo << "PKG_NAME=" << project.name << "\n";
+    pkgInfo << "CREATED_AT=" << std::put_time(std::gmtime(&t), "%Y-%m-%dT%H:%M:%SZ") << "\n";
+    pkgInfo << "GENERATOR_VERSION=1.0\n";
+
+    char hostname[256];
+#ifdef _WIN32
+    DWORD size = sizeof(hostname);
+    if (!GetComputerNameA(hostname, &size)) std::strncpy(hostname, "unknown", sizeof(hostname));
+#else
+    if (gethostname(hostname, sizeof(hostname)) != 0) std::strncpy(hostname, "unknown", sizeof(hostname));
+#endif
+    hostname[sizeof(hostname)-1] = '\0';
+
+    std::ofstream buildInfo(metaDir / "build.info");
+    buildInfo << "built=" << std::put_time(std::gmtime(&t), "%Y-%m-%dT%H:%M:%SZ") << "\n";
+    buildInfo << "host=" << hostname << "\n";
+
+    std::filesystem::create_directories(project.outputDir);
+    std::filesystem::path archivePath = project.outputDir / (project.name + ".tar.gz");
+    createArchive(tempRoot, archivePath);
+    std::filesystem::remove_all(tempRoot);
 }
 
 void Packager::createArchive(const std::filesystem::path& dir, const std::filesystem::path& archive) {
