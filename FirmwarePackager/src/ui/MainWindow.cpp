@@ -12,10 +12,20 @@
 #include <QAction>
 #include <QPushButton>
 #include <QStringList>
+#include <QMenuBar>
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), guiLogger(nullptr) {
     setWindowTitle("Upgrade Builder");
+
+    // file menu
+    QMenu *fileMenu = menuBar()->addMenu("File");
+    QAction *newAct = fileMenu->addAction("New");
+    connect(newAct, &QAction::triggered, this, &MainWindow::newProject);
+    QAction *openProjAct = fileMenu->addAction("Open");
+    connect(openProjAct, &QAction::triggered, this, &MainWindow::openProject);
+    QAction *saveProjAct = fileMenu->addAction("Save");
+    connect(saveProjAct, &QAction::triggered, this, &MainWindow::saveProject);
 
     auto *splitter = new QSplitter(Qt::Vertical, this);
 
@@ -84,6 +94,41 @@ MainWindow::MainWindow(QWidget* parent)
 
     guiLogger = new GuiLogger(logPane);
     packager = std::make_unique<core::Packager>(scanner, hasher, manifest, script, idGen, *guiLogger);
+}
+
+void MainWindow::newProject() {
+    currentProject = core::Project();
+    rootEdit->clear();
+    outputEdit->clear();
+    model->setRowCount(0);
+}
+
+void MainWindow::openProject() {
+    QString file = QFileDialog::getOpenFileName(this, "Open Project", QString(), "Project Files (*.json)");
+    if (file.isEmpty())
+        return;
+    try {
+        currentProject = serializer.load(file.toStdString());
+    } catch (const std::exception& e) {
+        QMessageBox::critical(this, "Error", e.what());
+        return;
+    }
+    rootEdit->setText(QString::fromStdString(currentProject.rootDir.string()));
+    outputEdit->setText(QString::fromStdString(currentProject.outputDir.string()));
+    populateTable(currentProject);
+}
+
+void MainWindow::saveProject() {
+    QString file = QFileDialog::getSaveFileName(this, "Save Project", QString(), "Project Files (*.json)");
+    if (file.isEmpty())
+        return;
+    currentProject.rootDir = rootEdit->text().toStdString();
+    currentProject.outputDir = outputEdit->text().toStdString();
+    try {
+        serializer.save(currentProject, file.toStdString());
+    } catch (const std::exception& e) {
+        QMessageBox::critical(this, "Error", e.what());
+    }
 }
 
 void MainWindow::populateTable(const core::Project& project) {

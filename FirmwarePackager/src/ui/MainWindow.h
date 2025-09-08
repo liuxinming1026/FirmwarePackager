@@ -8,6 +8,7 @@
 #include <memory>
 #include "src/core/Packager.h"
 #include "src/core/ProjectModel.h"
+#include "src/core/ProjectSerializer.h"
 #include "GuiLogger.h"
 
 class MainWindow : public QMainWindow {
@@ -16,6 +17,9 @@ public:
     explicit MainWindow(QWidget* parent = nullptr);
 
 private slots:
+    void newProject();
+    void openProject();
+    void saveProject();
     void openRoot();
     void buildPackage();
     void openSettings();
@@ -36,6 +40,7 @@ private:
     core::ManifestWriter manifest;
     core::ScriptWriter script;
     core::IdGenerator idGen;
+    core::ProjectSerializer serializer;
     std::unique_ptr<core::Packager> packager;
     core::Project currentProject;
 };
