@@ -17,7 +17,9 @@ std::string replaceAll(std::string str, const std::string& from, const std::stri
 }
 
 void ScriptWriter::write(const Project& project, const std::filesystem::path& output) const {
-    std::filesystem::create_directories(output);
+    // scripts are always emitted into a "scripts" subdirectory of the output
+    std::filesystem::path outRoot = output / "scripts";
+    std::filesystem::create_directories(outRoot);
 
     // Build replacement values
     std::string pkgName = project.name;
@@ -44,7 +46,7 @@ void ScriptWriter::write(const Project& project, const std::filesystem::path& ou
         content = replaceAll(content, "@FILES@", files);
 
         std::filesystem::path rel = std::filesystem::relative(entry.path(), tplDir);
-        std::filesystem::path outFile = output / rel;
+        std::filesystem::path outFile = outRoot / rel;
         if (outFile.extension() == ".in") {
             outFile.replace_extension("");
         }

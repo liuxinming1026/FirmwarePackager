@@ -23,11 +23,11 @@ TEST(ScriptWriterTest, GeneratesScriptsWithReplacements){
     writer.write(project, out);
     current_path(cwd);
 
-    EXPECT_TRUE(exists(out/"install.sh"));
-    EXPECT_TRUE(exists(out/"recover_boot.sh"));
-    EXPECT_TRUE(exists(out/"init/sysv/S95-upgrade-recover"));
+    EXPECT_TRUE(exists(out/"scripts/install.sh"));
+    EXPECT_TRUE(exists(out/"scripts/recover_boot.sh"));
+    EXPECT_TRUE(exists(out/"scripts/init/sysv/S95-upgrade-recover"));
 
-    std::ifstream in(out/"install.sh");
+    std::ifstream in(out/"scripts/install.sh");
     std::stringstream buffer; buffer << in.rdbuf();
     std::string content = buffer.str();
     std::string pkgId = std::to_string(std::hash<std::string>{}(project.name));
@@ -37,7 +37,7 @@ TEST(ScriptWriterTest, GeneratesScriptsWithReplacements){
     EXPECT_EQ(content.find("@PKG_NAME@"), std::string::npos);
     EXPECT_EQ(content.find("@PKG_VERSION@"), std::string::npos);
 
-    auto perms = status(out/"install.sh").permissions();
+    auto perms = status(out/"scripts/install.sh").permissions();
     EXPECT_NE(perms & perms::owner_exec, perms::none);
 }
 
