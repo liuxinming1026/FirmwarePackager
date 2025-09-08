@@ -1,0 +1,28 @@
+#!/bin/sh
+PKG_ID="@PKG_ID@"
+PKG_NAME="@PKG_NAME@"
+FILES="@FILES@"
+
+state="init"
+while true; do
+    case "$state" in
+        init)
+            echo "Installing $PKG_NAME ($PKG_ID)"
+            state="copy"
+            ;;
+        copy)
+            for f in $FILES; do
+                echo "Processing $f"
+            done
+            state="done"
+            ;;
+        done)
+            break
+            ;;
+        *)
+            echo "Unknown state: $state" >&2
+            exit 1
+            ;;
+    esac
+done
+exit 0
