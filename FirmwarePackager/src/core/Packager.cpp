@@ -35,7 +35,8 @@ Project Packager::buildProject(const std::filesystem::path& root, const Scanner:
 
 void Packager::package(const Project& project) {
     logger.info("Packaging project");
-    auto tempRoot = std::filesystem::temp_directory_path() / ("package-" + idGen.generate());
+    std::string pkgId = idGen.generate();
+    auto tempRoot = std::filesystem::temp_directory_path() / ("package-" + pkgId);
     std::filesystem::create_directories(tempRoot);
 
     std::filesystem::path packageDir = tempRoot / "package";
@@ -81,7 +82,6 @@ void Packager::package(const Project& project) {
 
     auto now = std::chrono::system_clock::now();
     std::time_t t = std::chrono::system_clock::to_time_t(now);
-    std::string pkgId = idGen.generate();
 
     std::ofstream pkgInfo(metaDir / "pkg.info");
     pkgInfo << "PKG_ID=" << pkgId << "\n";
