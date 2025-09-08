@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include "ProjectModel.h"
+#include "IdGenerator.h"
 
 namespace core {
 
@@ -13,7 +14,11 @@ public:
 
 class ScriptWriter : public IScriptWriter {
 public:
+    explicit ScriptWriter(IIdGenerator& idGen);
     void write(const Project& project, const std::filesystem::path& output) const override;
+
+private:
+    IIdGenerator& idGen;
 };
 
 } // namespace core

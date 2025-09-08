@@ -42,8 +42,8 @@ private:
     core::Scanner scanner;
     core::Hasher hasher;
     core::ManifestWriter manifest;
-    core::ScriptWriter script;
     core::IdGenerator idGen;
+    core::ScriptWriter script;
     core::ProjectSerializer serializer;
     std::unique_ptr<core::Packager> packager;
     core::Project currentProject;

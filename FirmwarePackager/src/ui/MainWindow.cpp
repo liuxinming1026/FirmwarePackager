@@ -23,7 +23,7 @@
 #include <filesystem>
 
 MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent), guiLogger(nullptr) {
+    : QMainWindow(parent), guiLogger(nullptr), idGen(), script(idGen) {
     setWindowTitle("Upgrade Builder");
 
     // file menu
