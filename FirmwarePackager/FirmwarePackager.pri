@@ -12,6 +12,7 @@ HEADERS += \
     $$PWD/src/core/ManifestWriter.h \
     $$PWD/src/core/Packager.h \
     $$PWD/src/core/ProjectModel.h \
+    $$PWD/src/core/ProjectSerializer.h \
     $$PWD/src/core/Scanner.h \
     $$PWD/src/core/ScriptWriter.h \
     $$PWD/src/ui/GuiLogger.h \
@@ -26,6 +27,7 @@ SOURCES += \
     $$PWD/src/core/ManifestWriter.cpp \
     $$PWD/src/core/Packager.cpp \
     $$PWD/src/core/ProjectModel.cpp \
+    $$PWD/src/core/ProjectSerializer.cpp \
     $$PWD/src/core/Scanner.cpp \
     $$PWD/src/core/ScriptWriter.cpp \
     $$PWD/src/core/core.cpp \
