@@ -10,8 +10,9 @@ class Scanner {
 public:
     using PathList = std::vector<std::filesystem::path>;
 
-    // Returns a list of all files under 'root' that are not excluded.
-    PathList scan(const std::filesystem::path& root, const PathList& exclusions) const;
+    // Returns a list of files under 'root' honoring exclusions. If 'recursive' is false
+    // only the top level is scanned.
+    PathList scan(const std::filesystem::path& root, const PathList& exclusions, bool recursive = true) const;
 
 private:
     bool isExcluded(const std::filesystem::path& path, const PathList& exclusions) const;
