@@ -34,6 +34,7 @@ TEST(ScriptWriterTest, GeneratesScriptsWithReplacements){
     EXPECT_NE(content.find(project.name), std::string::npos);
     EXPECT_NE(content.find(project.version), std::string::npos);
     EXPECT_NE(content.find(pkgId), std::string::npos);
+    EXPECT_NE(content.find("/opt/upgrade/packages/" + pkgId), std::string::npos);
     EXPECT_EQ(content.find("@PKG_NAME@"), std::string::npos);
     EXPECT_EQ(content.find("@PKG_VERSION@"), std::string::npos);
 

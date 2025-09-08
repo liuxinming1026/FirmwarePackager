@@ -1,9 +1,22 @@
 #!/bin/sh
 
-PKG_ID="@PKG_ID@"
-PKG_NAME="@PKG_NAME@"
-PKG_VERSION="@PKG_VERSION@"
+# Recover unfinished installations by inspecting state files and
+# re-running their installers with --resume.
 
-echo "Recovering boot for ${PKG_NAME}-${PKG_VERSION} (${PKG_ID})"
-# Placeholder for actual recovery logic
+STATE_DIR="/opt/upgrade/state"
+PKG_DIR="/opt/upgrade/packages"
+
+for st in "$STATE_DIR"/*.state; do
+    [ -e "$st" ] || continue
+    ID=$(basename "$st" .state)
+    ARCHIVE="$PKG_DIR/${ID}.tar.gz"
+    [ -f "$ARCHIVE" ] || continue
+    TMP="$(mktemp -d)"
+    tar -xzf "$ARCHIVE" -C "$TMP"
+    if [ -f "$TMP/install.sh" ]; then
+        (cd "$TMP" && ./install.sh --resume)
+    fi
+    rm -rf "$TMP"
+done
+
 exit 0
