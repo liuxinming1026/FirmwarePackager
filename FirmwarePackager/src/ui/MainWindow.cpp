@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 #include "MappingDialog.h"
 #include "ProjectSettingsDialog.h"
+#include "BatchEditDialog.h"
 
 #include <QToolBar>
 #include <QDockWidget>
@@ -13,6 +14,13 @@
 #include <QPushButton>
 #include <QStringList>
 #include <QMenuBar>
+#include <QTemporaryDir>
+#include <QDialogButtonBox>
+#include <QVBoxLayout>
+#include <fstream>
+#include <vector>
+#include <iterator>
+#include <filesystem>
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), guiLogger(nullptr) {
@@ -31,17 +39,21 @@ MainWindow::MainWindow(QWidget* parent)
 
     model = new QStandardItemModel(0, 9, this);
     model->setHeaderData(0, Qt::Horizontal, "Path");
-    model->setHeaderData(1, Qt::Horizontal, "Dest");
+    model->setHeaderData(1, Qt::Horizontal, "Target");
     model->setHeaderData(2, Qt::Horizontal, "ID");
     model->setHeaderData(3, Qt::Horizontal, "Mode");
     model->setHeaderData(4, Qt::Horizontal, "Owner");
     model->setHeaderData(5, Qt::Horizontal, "Group");
     model->setHeaderData(6, Qt::Horizontal, "Recursive");
     model->setHeaderData(7, Qt::Horizontal, "Excludes");
-    model->setHeaderData(8, Qt::Horizontal, "Hash");
+    model->setHeaderData(8, Qt::Horizontal, "MD5");
 
     tableView = new QTableView;
     tableView->setModel(model);
+    tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    tableView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    tableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    connect(tableView, &QTableView::doubleClicked, this, &MainWindow::editMapping);
     splitter->addWidget(tableView);
 
     logPane = new QPlainTextEdit;
@@ -82,6 +94,18 @@ MainWindow::MainWindow(QWidget* parent)
     auto *tb = addToolBar("Main");
     QAction *openAct = tb->addAction("Open");
     connect(openAct, &QAction::triggered, this, &MainWindow::openRoot);
+
+    QAction *addFileAct = tb->addAction("Add File");
+    connect(addFileAct, &QAction::triggered, this, &MainWindow::addFile);
+
+    QAction *addFolderAct = tb->addAction("Add Folder");
+    connect(addFolderAct, &QAction::triggered, this, &MainWindow::addFolder);
+
+    QAction *batchAct = tb->addAction("Batch Edit");
+    connect(batchAct, &QAction::triggered, this, &MainWindow::batchEdit);
+
+    QAction *previewAct = tb->addAction("Preview Script");
+    connect(previewAct, &QAction::triggered, this, &MainWindow::previewScript);
 
     QAction *buildAct = tb->addAction("Build");
     connect(buildAct, &QAction::triggered, this, &MainWindow::buildPackage);
@@ -206,5 +230,120 @@ void MainWindow::editMapping() {
             exList << QString::fromStdString(ex.string());
         model->setData(model->index(row, 7), exList.join(","));
     }
+}
+
+void MainWindow::addFile() {
+    if (rootEdit->text().isEmpty()) {
+        QMessageBox::warning(this, "Missing Root", "Please select project root first.");
+        return;
+    }
+    QStringList files = QFileDialog::getOpenFileNames(this, "Select Files", rootEdit->text());
+    if (files.isEmpty())
+        return;
+    std::filesystem::path root = rootEdit->text().toStdString();
+    for (const auto& f : files) {
+        std::filesystem::path abs = f.toStdString();
+        std::error_code ec;
+        auto rel = std::filesystem::relative(abs, root, ec);
+        if (ec || rel.empty() || rel.native().rfind("..", 0) == 0)
+            continue;
+        std::ifstream in(abs, std::ios::binary);
+        std::vector<uint8_t> data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        std::string hash = hasher.md5(data);
+        std::string id = idGen.generate();
+        currentProject.files.emplace_back(rel, id, hash);
+    }
+    populateTable(currentProject);
+}
+
+void MainWindow::addFolder() {
+    if (rootEdit->text().isEmpty()) {
+        QMessageBox::warning(this, "Missing Root", "Please select project root first.");
+        return;
+    }
+    QString dir = QFileDialog::getExistingDirectory(this, "Select Folder", rootEdit->text());
+    if (dir.isEmpty())
+        return;
+    std::filesystem::path root = rootEdit->text().toStdString();
+    std::filesystem::path folder = dir.toStdString();
+    auto paths = scanner.scan(folder, {});
+    for (const auto& p : paths) {
+        std::error_code ec;
+        auto rel = std::filesystem::relative(p, root, ec);
+        if (ec || rel.empty() || rel.native().rfind("..", 0) == 0)
+            continue;
+        std::ifstream in(p, std::ios::binary);
+        std::vector<uint8_t> data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        std::string hash = hasher.md5(data);
+        std::string id = idGen.generate();
+        currentProject.files.emplace_back(rel, id, hash);
+    }
+    populateTable(currentProject);
+}
+
+void MainWindow::batchEdit() {
+    auto rows = tableView->selectionModel()->selectedRows();
+    if (rows.isEmpty())
+        return;
+    BatchEditDialog dlg(this);
+    if (dlg.exec() != QDialog::Accepted)
+        return;
+    for (const auto& idx : rows) {
+        int row = idx.row();
+        if (row < 0 || row >= static_cast<int>(currentProject.files.size()))
+            continue;
+        auto& entry = currentProject.files[row];
+        if (!dlg.prefix().isEmpty()) {
+            std::filesystem::path pref = dlg.prefix().toStdString();
+            entry.dest = pref / entry.dest;
+            model->setData(model->index(row, 1), QString::fromStdString(entry.dest.string()));
+        }
+        if (!dlg.mode().isEmpty()) {
+            entry.mode = dlg.mode().toStdString();
+            model->setData(model->index(row, 3), dlg.mode());
+        }
+        if (!dlg.owner().isEmpty()) {
+            entry.owner = dlg.owner().toStdString();
+            model->setData(model->index(row, 4), dlg.owner());
+        }
+        if (!dlg.group().isEmpty()) {
+            entry.group = dlg.group().toStdString();
+            model->setData(model->index(row, 5), dlg.group());
+        }
+    }
+}
+
+void MainWindow::previewScript() {
+    QTemporaryDir tempDir;
+    if (!tempDir.isValid()) {
+        QMessageBox::warning(this, "Error", "Unable to create temporary directory.");
+        return;
+    }
+    try {
+        script.write(currentProject, tempDir.path().toStdString());
+    } catch (const std::exception& e) {
+        QMessageBox::critical(this, "Error", e.what());
+        return;
+    }
+    QFile file(tempDir.path() + "/install.sh");
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, "Error", "install.sh not generated");
+        return;
+    }
+    QString content = file.readAll();
+    file.close();
+
+    QDialog dlg(this);
+    dlg.setWindowTitle("install.sh Preview");
+    auto *layout = new QVBoxLayout(&dlg);
+    auto *text = new QPlainTextEdit;
+    text->setReadOnly(true);
+    text->setPlainText(content);
+    layout->addWidget(text);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close);
+    connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    layout->addWidget(buttons);
+    dlg.resize(600, 400);
+    dlg.exec();
 }
 
