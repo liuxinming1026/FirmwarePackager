@@ -39,10 +39,8 @@ void Packager::package(const Project& project) {
     std::filesystem::create_directories(tempRoot);
 
     std::filesystem::path payloadDir = tempRoot / "payload";
-    std::filesystem::path scriptsDir = tempRoot / "scripts";
     std::filesystem::path metaDir = tempRoot / "META";
     std::filesystem::create_directories(payloadDir);
-    std::filesystem::create_directories(scriptsDir);
     std::filesystem::create_directories(metaDir);
 
     for (const auto& f : project.files) {
@@ -53,7 +51,7 @@ void Packager::package(const Project& project) {
     }
 
     manifest.write(project, tempRoot / "manifest.tsv");
-    script.write(project, scriptsDir);
+    script.write(project, tempRoot);
 
     auto now = std::chrono::system_clock::now();
     std::time_t t = std::chrono::system_clock::to_time_t(now);
