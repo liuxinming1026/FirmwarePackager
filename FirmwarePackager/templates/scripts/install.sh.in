@@ -1,28 +1,61 @@
 #!/bin/sh
+
+set -e
+
 PKG_ID="@PKG_ID@"
 PKG_NAME="@PKG_NAME@"
+PKG_VERSION="@PKG_VERSION@"
 FILES="@FILES@"
 
-state="init"
+LOG_FILE="/var/log/${PKG_NAME}-install.log"
+STATE="init"
+
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') [$STATE] $1" >> "$LOG_FILE"
+}
+
+rollback() {
+    log "rolling back"
+    for f in $FILES; do
+        rm -f "/$f"
+    done
+}
+
+cleanup() {
+    log "cleanup"
+}
+
+trap 'STATE=rollback; log "error"; rollback; cleanup; exit 1' INT TERM HUP QUIT
+trap 'cleanup' EXIT
+
 while true; do
-    case "$state" in
+    case "$STATE" in
         init)
-            echo "Installing $PKG_NAME ($PKG_ID)"
-            state="copy"
+            log "starting install for ${PKG_NAME}-${PKG_VERSION} (${PKG_ID})"
+            STATE="copy"
             ;;
         copy)
             for f in $FILES; do
-                echo "Processing $f"
+                log "installing $f"
+                # install step placeholder
+                :
             done
-            state="done"
+            STATE="done"
+            ;;
+        rollback)
+            rollback
+            STATE="done"
             ;;
         done)
+            log "installation complete"
             break
             ;;
         *)
-            echo "Unknown state: $state" >&2
+            log "unknown state $STATE"
             exit 1
             ;;
     esac
+
 done
+
 exit 0

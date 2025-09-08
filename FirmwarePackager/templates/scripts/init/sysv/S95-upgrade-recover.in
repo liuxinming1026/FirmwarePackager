@@ -1,0 +1,25 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          upgrade-recover
+# Required-Start:    $local_fs
+# Required-Stop:
+# Default-Start:     S
+# Default-Stop:
+# Short-Description: Run recovery after upgrade
+### END INIT INFO
+
+PKG_ID="@PKG_ID@"
+PKG_NAME="@PKG_NAME@"
+PKG_VERSION="@PKG_VERSION@"
+
+case "$1" in
+    start)
+        /usr/lib/${PKG_NAME}/recover_boot.sh
+        ;;
+    *)
+        echo "Usage: $0 start" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

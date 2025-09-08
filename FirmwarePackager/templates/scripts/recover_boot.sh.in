@@ -1,0 +1,9 @@
+#!/bin/sh
+
+PKG_ID="@PKG_ID@"
+PKG_NAME="@PKG_NAME@"
+PKG_VERSION="@PKG_VERSION@"
+
+echo "Recovering boot for ${PKG_NAME}-${PKG_VERSION} (${PKG_ID})"
+# Placeholder for actual recovery logic
+exit 0
