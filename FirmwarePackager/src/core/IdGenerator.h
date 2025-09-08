@@ -1,7 +1,8 @@
 #pragma once
 
-#include <atomic>
 #include <string>
+#include <random>
+#include <mutex>
 
 namespace core {
 
@@ -16,7 +17,9 @@ public:
     IdGenerator();
     std::string generate() override;
 private:
-    std::atomic<uint64_t> counter;
+    std::mt19937 rng;
+    std::mutex mtx;
+    std::uniform_int_distribution<uint32_t> dist;
 };
 
 } // namespace core
