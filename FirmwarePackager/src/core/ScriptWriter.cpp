@@ -2,7 +2,6 @@
 
 #include <fstream>
 #include <sstream>
-#include <vector>
 
 namespace core {
 
@@ -17,6 +16,8 @@ std::string replaceAll(std::string str, const std::string& from, const std::stri
 }
 }
 
+ScriptWriter::ScriptWriter(IIdGenerator& gen) : idGen(gen) {}
+
 void ScriptWriter::write(const Project& project, const std::filesystem::path& output) const {
     // scripts are always emitted into a "scripts" subdirectory of the output
     std::filesystem::path outRoot = output / "scripts";
@@ -24,25 +25,16 @@ void ScriptWriter::write(const Project& project, const std::filesystem::path& ou
 
     // Build replacement values
     std::string pkgName = project.name;
-    std::string pkgId = std::to_string(std::hash<std::string>{}(project.name));
+    std::string pkgId = idGen.generate();
     std::string pkgVersion = project.version;
 
-    std::string files;
-    for (const auto& f : project.files) {
-        if (!files.empty()) files += ' ';
-        files += f.path.string();
-    }
-
     std::filesystem::path tplDir = std::filesystem::path("templates") / "scripts";
-    std::vector<std::filesystem::path> templates = {
-        tplDir / "install.sh.in",
-        tplDir / "recover_boot.sh.in",
-        tplDir / "init/sysv/S95-upgrade-recover.in"
-    };
 
-    for (const auto& tpl : templates) {
-        if (!std::filesystem::exists(tpl)) continue;
-        std::ifstream in(tpl);
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(tplDir)) {
+        if (entry.is_directory()) continue;
+
+        std::ifstream in(entry.path());
+        if (!in) continue;
         std::stringstream buffer;
         buffer << in.rdbuf();
         std::string content = buffer.str();
@@ -50,9 +42,8 @@ void ScriptWriter::write(const Project& project, const std::filesystem::path& ou
         content = replaceAll(content, "@PKG_ID@", pkgId);
         content = replaceAll(content, "@PKG_NAME@", pkgName);
         content = replaceAll(content, "@PKG_VERSION@", pkgVersion);
-        content = replaceAll(content, "@FILES@", files);
 
-        std::filesystem::path rel = std::filesystem::relative(tpl, tplDir);
+        std::filesystem::path rel = std::filesystem::relative(entry.path(), tplDir);
         std::filesystem::path outFile = outRoot / rel;
         if (outFile.extension() == ".in") {
             outFile.replace_extension("");

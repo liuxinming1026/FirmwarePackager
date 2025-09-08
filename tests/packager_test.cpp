@@ -31,8 +31,8 @@ TEST(PackagerTest, GeneratesArchiveWithExpectedContents) {
     core::Scanner scanner;
     core::Hasher hasher;
     core::ManifestWriter mw;
-    core::ScriptWriter sw;
     core::IdGenerator idgen;
+    core::ScriptWriter sw(idgen);
     SilentLogger logger;
     core::Packager pack(scanner, hasher, mw, sw, idgen, logger);
 

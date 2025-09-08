@@ -19,7 +19,8 @@ TEST(ScriptWriterTest, GeneratesScriptsWithReplacements){
     // ScriptWriter expects templates/ under current working directory
     auto cwd = current_path();
     current_path("FirmwarePackager");
-    core::ScriptWriter writer;
+    core::IdGenerator idGen;
+    core::ScriptWriter writer(idGen);
     writer.write(project, out);
     current_path(cwd);
 
@@ -30,12 +31,14 @@ TEST(ScriptWriterTest, GeneratesScriptsWithReplacements){
     std::ifstream in(out/"scripts/install.sh");
     std::stringstream buffer; buffer << in.rdbuf();
     std::string content = buffer.str();
-    std::string pkgId = std::to_string(std::hash<std::string>{}(project.name));
+    core::IdGenerator tmpGen;
+    std::string pkgId = tmpGen.generate();
     EXPECT_NE(content.find(project.name), std::string::npos);
     EXPECT_NE(content.find(project.version), std::string::npos);
     EXPECT_NE(content.find(pkgId), std::string::npos);
     EXPECT_EQ(content.find("@PKG_NAME@"), std::string::npos);
     EXPECT_EQ(content.find("@PKG_VERSION@"), std::string::npos);
+    EXPECT_EQ(content.find("@FILES@"), std::string::npos);
 
     auto perms = status(out/"scripts/install.sh").permissions();
     EXPECT_NE(perms & perms::owner_exec, perms::none);
