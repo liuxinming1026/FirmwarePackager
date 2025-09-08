@@ -7,14 +7,9 @@
 # Default-Stop:
 # Short-Description: Run recovery after upgrade
 ### END INIT INFO
-
-PKG_ID="@PKG_ID@"
-PKG_NAME="@PKG_NAME@"
-PKG_VERSION="@PKG_VERSION@"
-
 case "$1" in
     start)
-        /usr/lib/${PKG_NAME}/recover_boot.sh
+        /opt/upgrade/last/scripts/recover_boot.sh
         ;;
     *)
         echo "Usage: $0 start" >&2

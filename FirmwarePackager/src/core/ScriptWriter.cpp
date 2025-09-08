@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <vector>
 
 namespace core {
 
@@ -33,9 +34,15 @@ void ScriptWriter::write(const Project& project, const std::filesystem::path& ou
     }
 
     std::filesystem::path tplDir = std::filesystem::path("templates") / "scripts";
-    for (const auto& entry : std::filesystem::recursive_directory_iterator(tplDir)) {
-        if (!entry.is_regular_file()) continue;
-        std::ifstream in(entry.path());
+    std::vector<std::filesystem::path> templates = {
+        tplDir / "install.sh.in",
+        tplDir / "recover_boot.sh.in",
+        tplDir / "init/sysv/S95-upgrade-recover.in"
+    };
+
+    for (const auto& tpl : templates) {
+        if (!std::filesystem::exists(tpl)) continue;
+        std::ifstream in(tpl);
         std::stringstream buffer;
         buffer << in.rdbuf();
         std::string content = buffer.str();
@@ -45,7 +52,7 @@ void ScriptWriter::write(const Project& project, const std::filesystem::path& ou
         content = replaceAll(content, "@PKG_VERSION@", pkgVersion);
         content = replaceAll(content, "@FILES@", files);
 
-        std::filesystem::path rel = std::filesystem::relative(entry.path(), tplDir);
+        std::filesystem::path rel = std::filesystem::relative(tpl, tplDir);
         std::filesystem::path outFile = outRoot / rel;
         if (outFile.extension() == ".in") {
             outFile.replace_extension("");
