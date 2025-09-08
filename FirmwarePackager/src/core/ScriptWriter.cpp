@@ -22,6 +22,7 @@ void ScriptWriter::write(const Project& project, const std::filesystem::path& ou
     // Build replacement values
     std::string pkgName = project.name;
     std::string pkgId = std::to_string(std::hash<std::string>{}(project.name));
+    std::string pkgVersion = project.version;
 
     std::string files;
     for (const auto& f : project.files) {
@@ -30,7 +31,7 @@ void ScriptWriter::write(const Project& project, const std::filesystem::path& ou
     }
 
     std::filesystem::path tplDir = std::filesystem::path("templates") / "scripts";
-    for (const auto& entry : std::filesystem::directory_iterator(tplDir)) {
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(tplDir)) {
         if (!entry.is_regular_file()) continue;
         std::ifstream in(entry.path());
         std::stringstream buffer;
@@ -39,12 +40,15 @@ void ScriptWriter::write(const Project& project, const std::filesystem::path& ou
 
         content = replaceAll(content, "@PKG_ID@", pkgId);
         content = replaceAll(content, "@PKG_NAME@", pkgName);
+        content = replaceAll(content, "@PKG_VERSION@", pkgVersion);
         content = replaceAll(content, "@FILES@", files);
 
-        std::filesystem::path outFile = output / entry.path().filename();
+        std::filesystem::path rel = std::filesystem::relative(entry.path(), tplDir);
+        std::filesystem::path outFile = output / rel;
         if (outFile.extension() == ".in") {
             outFile.replace_extension("");
         }
+        std::filesystem::create_directories(outFile.parent_path());
         std::ofstream out(outFile);
         out << content;
         out.close();
