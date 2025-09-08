@@ -2,6 +2,7 @@
 
 #include <QDialog>
 #include <QLineEdit>
+#include <QCheckBox>
 #include "src/core/ProjectModel.h"
 
 // Dialog for editing mapping information of a FileEntry
@@ -14,5 +15,11 @@ protected:
 private:
     core::FileEntry& fileEntry;
     QLineEdit* idEdit;
+    QLineEdit* destEdit;
+    QLineEdit* modeEdit;
+    QLineEdit* ownerEdit;
+    QLineEdit* groupEdit;
+    QCheckBox* recursiveCheck;
+    QLineEdit* excludesEdit;
 };
 
