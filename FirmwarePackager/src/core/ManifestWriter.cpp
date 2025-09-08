@@ -56,12 +56,25 @@ void ManifestWriter::write(const Project& project, const std::filesystem::path& 
             struct Rec { std::filesystem::path rel; std::filesystem::path dest; std::string hash; };
             std::vector<Rec> files;
             if (std::filesystem::exists(abs)) {
-                for (auto& entry : std::filesystem::recursive_directory_iterator(abs)) {
-                    if (!entry.is_regular_file()) continue;
-                    auto rel = std::filesystem::relative(entry.path(), project.rootDir);
-                    auto relToDir = std::filesystem::relative(entry.path(), abs);
+                for (std::filesystem::recursive_directory_iterator it(abs), end; it != end; ++it) {
+                    auto relToDir = std::filesystem::relative(it->path(), abs);
+                    std::string relStr = relToDir.generic_string();
+                    bool skip = false;
+                    for (const auto& ex : f.excludes) {
+                        auto exStr = ex.generic_string();
+                        if (relStr == exStr || relStr.rfind(exStr + '/', 0) == 0) {
+                            skip = true;
+                            break;
+                        }
+                    }
+                    if (skip) {
+                        if (it->is_directory()) it.disable_recursion_pending();
+                        continue;
+                    }
+                    if (!it->is_regular_file()) continue;
+                    auto rel = std::filesystem::relative(it->path(), project.rootDir);
                     auto dest = f.dest / relToDir;
-                    std::string h = md5File(entry.path());
+                    std::string h = md5File(it->path());
                     files.push_back({rel, dest, h});
                 }
             }

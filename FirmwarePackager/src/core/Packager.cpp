@@ -38,20 +38,46 @@ void Packager::package(const Project& project) {
     auto tempRoot = std::filesystem::temp_directory_path() / ("package-" + idGen.generate());
     std::filesystem::create_directories(tempRoot);
 
-    std::filesystem::path payloadDir = tempRoot / "payload";
-    std::filesystem::path metaDir = tempRoot / "META";
+    std::filesystem::path packageDir = tempRoot / "package";
+    std::filesystem::path payloadDir = packageDir / "payload";
+    std::filesystem::path metaDir = packageDir / "META";
     std::filesystem::create_directories(payloadDir);
     std::filesystem::create_directories(metaDir);
 
     for (const auto& f : project.files) {
         auto src = project.rootDir / f.path;
-        auto dst = payloadDir / f.path;
-        std::filesystem::create_directories(dst.parent_path());
-        std::filesystem::copy_file(src, dst, std::filesystem::copy_options::overwrite_existing);
+        auto destRoot = payloadDir / f.dest;
+        if (f.recursive || std::filesystem::is_directory(src)) {
+            if (!std::filesystem::exists(src)) continue;
+            for (std::filesystem::recursive_directory_iterator it(src), end; it != end; ++it) {
+                auto relToDir = std::filesystem::relative(it->path(), src);
+                std::string relStr = relToDir.generic_string();
+                bool skip = false;
+                for (const auto& ex : f.excludes) {
+                    auto exStr = ex.generic_string();
+                    if (relStr == exStr || relStr.rfind(exStr + '/', 0) == 0) {
+                        skip = true;
+                        break;
+                    }
+                }
+                if (skip) {
+                    if (it->is_directory()) it.disable_recursion_pending();
+                    continue;
+                }
+                if (!it->is_regular_file()) continue;
+                auto dst = destRoot / relToDir;
+                std::filesystem::create_directories(dst.parent_path());
+                std::filesystem::copy_file(it->path(), dst, std::filesystem::copy_options::overwrite_existing);
+            }
+        } else {
+            if (!std::filesystem::exists(src)) continue;
+            std::filesystem::create_directories(destRoot.parent_path());
+            std::filesystem::copy_file(src, destRoot, std::filesystem::copy_options::overwrite_existing);
+        }
     }
 
-    manifest.write(project, tempRoot / "manifest.tsv");
-    script.write(project, tempRoot);
+    manifest.write(project, packageDir / "manifest.tsv");
+    script.write(project, packageDir);
 
     auto now = std::chrono::system_clock::now();
     std::time_t t = std::chrono::system_clock::to_time_t(now);
@@ -79,7 +105,7 @@ void Packager::package(const Project& project) {
 
     std::filesystem::create_directories(project.outputDir);
     std::filesystem::path archivePath = project.outputDir / (project.name + ".tar.gz");
-    createArchive(tempRoot, archivePath);
+    createArchive(packageDir, archivePath);
     std::filesystem::remove_all(tempRoot);
 }
 
@@ -89,9 +115,11 @@ void Packager::createArchive(const std::filesystem::path& dir, const std::filesy
     archive_write_set_format_pax_restricted(a);
     archive_write_open_filename(a, archive.string().c_str());
 
+    auto base = dir.filename();
     for (const auto& entry : std::filesystem::recursive_directory_iterator(dir)) {
         if (!entry.is_regular_file()) continue;
-        auto rel = std::filesystem::relative(entry.path(), dir);
+        auto relInside = std::filesystem::relative(entry.path(), dir);
+        auto rel = base / relInside;
         struct archive_entry* e = archive_entry_new();
         archive_entry_set_pathname(e, rel.string().c_str());
         archive_entry_set_size(e, std::filesystem::file_size(entry.path()));
