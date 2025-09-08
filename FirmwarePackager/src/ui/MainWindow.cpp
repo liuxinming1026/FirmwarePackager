@@ -23,7 +23,7 @@
 #include <filesystem>
 
 MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent), guiLogger(nullptr), idGen(), script(idGen) {
+    : QMainWindow(parent), guiLogger(nullptr) {
     setWindowTitle("Upgrade Builder");
 
     // file menu
@@ -320,7 +320,7 @@ void MainWindow::previewScript() {
         return;
     }
     try {
-        script.write(currentProject, tempDir.path().toStdString());
+        script.write(currentProject, tempDir.path().toStdString(), idGen.generate());
     } catch (const std::exception& e) {
         QMessageBox::critical(this, "Error", e.what());
         return;

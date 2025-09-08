@@ -16,16 +16,14 @@ std::string replaceAll(std::string str, const std::string& from, const std::stri
 }
 }
 
-ScriptWriter::ScriptWriter(IIdGenerator& gen) : idGen(gen) {}
-
-void ScriptWriter::write(const Project& project, const std::filesystem::path& output) const {
+void ScriptWriter::write(const Project& project, const std::filesystem::path& output,
+                         const std::string& pkgId) const {
     // scripts are always emitted into a "scripts" subdirectory of the output
     std::filesystem::path outRoot = output / "scripts";
     std::filesystem::create_directories(outRoot);
 
     // Build replacement values
     std::string pkgName = project.name;
-    std::string pkgId = idGen.generate();
     std::string pkgVersion = project.version;
 
     std::filesystem::path tplDir = std::filesystem::path("templates") / "scripts";
