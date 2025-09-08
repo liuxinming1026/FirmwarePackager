@@ -10,6 +10,7 @@
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
+#include <string>
 
 using namespace std::filesystem;
 
@@ -34,7 +35,7 @@ TEST(PackagerTest, GeneratesArchiveWithExpectedContents) {
     core::Hasher hasher;
     core::ManifestWriter mw;
     core::IdGenerator idgen;
-    core::ScriptWriter sw(idgen);
+    core::ScriptWriter sw;
     SilentLogger logger;
     core::Packager pack(scanner, hasher, mw, sw, idgen, logger);
 
@@ -45,7 +46,7 @@ TEST(PackagerTest, GeneratesArchiveWithExpectedContents) {
     core::FileEntry fe; fe.path="dir"; fe.dest="destdir"; fe.recursive=true; fe.excludes={"sub","exclude.txt"}; project.files.push_back(fe);
 
     auto cwd = current_path();
-    current_path("FirmwarePackager");
+    current_path("FirmwarePackager/FirmwarePackager");
     pack.package(project);
     current_path(cwd);
 

@@ -78,7 +78,7 @@ void Packager::package(const Project& project) {
     }
 
     manifest.write(project, packageDir / "manifest.tsv");
-    script.write(project, packageDir);
+    script.write(project, packageDir, pkgId);
 
     auto now = std::chrono::system_clock::now();
     std::time_t t = std::chrono::system_clock::to_time_t(now);

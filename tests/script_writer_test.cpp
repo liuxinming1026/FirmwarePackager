@@ -1,9 +1,11 @@
 #include <gtest/gtest.h>
 #include "core/ScriptWriter.h"
 #include "core/ProjectModel.h"
+#include "core/IdGenerator.h"
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <string>
 
 using namespace std::filesystem;
 
@@ -18,10 +20,11 @@ TEST(ScriptWriterTest, GeneratesScriptsWithReplacements){
 
     // ScriptWriter expects templates/ under current working directory
     auto cwd = current_path();
-    current_path("FirmwarePackager");
+    current_path("FirmwarePackager/FirmwarePackager");
     core::IdGenerator idGen;
-    core::ScriptWriter writer(idGen);
-    writer.write(project, out);
+    core::ScriptWriter writer;
+    std::string pkgId = idGen.generate();
+    writer.write(project, out, pkgId);
     current_path(cwd);
 
     EXPECT_TRUE(exists(out/"scripts/install.sh"));
@@ -31,8 +34,6 @@ TEST(ScriptWriterTest, GeneratesScriptsWithReplacements){
     std::ifstream in(out/"scripts/install.sh");
     std::stringstream buffer; buffer << in.rdbuf();
     std::string content = buffer.str();
-    core::IdGenerator tmpGen;
-    std::string pkgId = tmpGen.generate();
     EXPECT_NE(content.find(project.name), std::string::npos);
     EXPECT_NE(content.find(project.version), std::string::npos);
     EXPECT_NE(content.find(pkgId), std::string::npos);
