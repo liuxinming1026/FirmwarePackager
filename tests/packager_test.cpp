@@ -22,8 +22,10 @@ public:
 TEST(PackagerTest, GeneratesArchiveWithExpectedContents) {
     path root = temp_directory_path() / "pkg_root";
     remove_all(root);
-    create_directories(root);
-    { std::ofstream(root / "file.txt") << "data"; }
+    create_directories(root / "dir" / "sub");
+    { std::ofstream(root / "dir" / "a.txt") << "data"; }
+    { std::ofstream(root / "dir" / "sub" / "b.txt") << "skip"; }
+    { std::ofstream(root / "dir" / "exclude.txt") << "skip"; }
 
     path out = temp_directory_path() / "pkg_out";
     remove_all(out);
@@ -36,9 +38,11 @@ TEST(PackagerTest, GeneratesArchiveWithExpectedContents) {
     SilentLogger logger;
     core::Packager pack(scanner, hasher, mw, sw, idgen, logger);
 
-    auto project = pack.buildProject(root, {});
+    core::Project project("pkg_root");
+    project.rootDir = root;
     project.outputDir = out;
     project.version = "1.0";
+    core::FileEntry fe; fe.path="dir"; fe.dest="destdir"; fe.recursive=true; fe.excludes={"sub","exclude.txt"}; project.files.push_back(fe);
 
     auto cwd = current_path();
     current_path("FirmwarePackager");
@@ -54,13 +58,18 @@ TEST(PackagerTest, GeneratesArchiveWithExpectedContents) {
     std::string cmd = "tar -xzf " + archive.string() + " -C " + extractDir.string();
     ASSERT_EQ(std::system(cmd.c_str()), 0);
 
-    path payloadFile = extractDir / "payload" / "file.txt";
-    ASSERT_TRUE(exists(payloadFile));
-    std::ifstream in(payloadFile);
-    std::string data; std::getline(in, data);
-    EXPECT_EQ(data, "data");
+    path packageDir = extractDir / "package";
+    ASSERT_TRUE(exists(packageDir));
+    EXPECT_FALSE(exists(extractDir / "payload"));
+    EXPECT_FALSE(exists(extractDir / "manifest.tsv"));
 
-    path manifestPath = extractDir / "manifest.tsv";
+    path payloadFile = packageDir / "payload" / "destdir" / "a.txt";
+    ASSERT_TRUE(exists(payloadFile));
+    EXPECT_FALSE(exists(packageDir / "payload" / "destdir" / "sub" / "b.txt"));
+    EXPECT_FALSE(exists(packageDir / "payload" / "destdir" / "exclude.txt"));
+    std::ifstream in(payloadFile); std::string data; std::getline(in, data); EXPECT_EQ(data, "data");
+
+    path manifestPath = packageDir / "manifest.tsv";
     ASSERT_TRUE(exists(manifestPath));
     std::ifstream mf(manifestPath);
     std::string line; std::getline(mf, line); // header
@@ -68,15 +77,18 @@ TEST(PackagerTest, GeneratesArchiveWithExpectedContents) {
     std::vector<std::string> cols; std::stringstream ss(line); std::string c;
     while (std::getline(ss, c, '\t')) cols.push_back(c);
     ASSERT_EQ(cols.size(), 6u);
-    EXPECT_EQ(cols[0], "file.txt");
-    EXPECT_EQ(cols[1], "file.txt");
-    EXPECT_EQ(cols[5], hasher.md5File(root / "file.txt"));
+    EXPECT_EQ(cols[0], "dir");
+    EXPECT_EQ(cols[1], "destdir");
+    ASSERT_TRUE(std::getline(mf, line));
+    cols.clear(); ss.clear(); ss.str(line);
+    while (std::getline(ss, c, '\t')) cols.push_back(c);
+    EXPECT_EQ(cols[0], "dir/a.txt");
+    EXPECT_EQ(cols[1], "destdir/a.txt");
+    EXPECT_EQ(cols[5], hasher.md5File(root/"dir"/"a.txt"));
 
-    path scriptPath = extractDir / "scripts" / "install.sh";
+    path scriptPath = packageDir / "scripts" / "install.sh";
     ASSERT_TRUE(exists(scriptPath));
-    std::ifstream sf(scriptPath);
-    std::stringstream buf; buf << sf.rdbuf();
-    std::string script = buf.str();
+    std::ifstream sf(scriptPath); std::stringstream buf; buf << sf.rdbuf(); std::string script = buf.str();
     EXPECT_NE(script.find(project.name), std::string::npos);
     EXPECT_NE(script.find(project.version), std::string::npos);
     EXPECT_EQ(script.find("@PKG_NAME@"), std::string::npos);

@@ -30,9 +30,10 @@ TEST(ManifestWriterTest, ExpandsDirectoriesAndWritesColumns){
     create_directories(tmp/"dir"/"sub");
     { std::ofstream(tmp/"dir"/"a.txt")<<"hello"; }
     { std::ofstream(tmp/"dir"/"sub"/"b.txt")<<"world"; }
+    { std::ofstream(tmp/"dir"/"exclude.txt")<<"nope"; }
 
     core::Project project; project.rootDir = tmp;
-    core::FileEntry fe; fe.path="dir"; fe.dest="destdir"; fe.mode="0644"; fe.owner="root"; fe.group="root"; fe.recursive=true; project.files.push_back(fe);
+    core::FileEntry fe; fe.path="dir"; fe.dest="destdir"; fe.mode="0644"; fe.owner="root"; fe.group="root"; fe.recursive=true; fe.excludes={"sub","exclude.txt"}; project.files.push_back(fe);
 
     core::ManifestWriter writer;
     auto manifestPath = tmp/"manifest.tsv";
@@ -44,12 +45,11 @@ TEST(ManifestWriterTest, ExpandsDirectoriesAndWritesColumns){
     while(std::getline(in,line)){
         std::vector<std::string> cols; std::stringstream ss(line); std::string c; while(std::getline(ss,c,'\t')) cols.push_back(c); lines.push_back(cols); }
 
-    ASSERT_EQ(lines.size(), 4u);
+    ASSERT_EQ(lines.size(), 3u);
     EXPECT_EQ(lines[0], (std::vector<std::string>{"relpath","dest","mode","owner","group","md5"}));
 
     std::string hashA = md5File(tmp/"dir"/"a.txt");
-    std::string hashB = md5File(tmp/"dir"/"sub"/"b.txt");
-    std::string dirHash = md5String(hashA + hashB);
+    std::string dirHash = md5String(hashA);
 
     auto dirLine = lines[1];
     EXPECT_EQ(dirLine[0], "dir");
@@ -63,9 +63,10 @@ TEST(ManifestWriterTest, ExpandsDirectoriesAndWritesColumns){
     EXPECT_EQ(lines[2][1], "destdir/a.txt");
     EXPECT_EQ(lines[2][5], hashA);
 
-    EXPECT_EQ(lines[3][0], "dir/sub/b.txt");
-    EXPECT_EQ(lines[3][1], "destdir/sub/b.txt");
-    EXPECT_EQ(lines[3][5], hashB);
+    for (const auto& l : lines) {
+        EXPECT_EQ(std::find(l.begin(), l.end(), "destdir/sub/b.txt"), l.end());
+        EXPECT_EQ(std::find(l.begin(), l.end(), "destdir/exclude.txt"), l.end());
+    }
 
     remove_all(tmp);
 }
