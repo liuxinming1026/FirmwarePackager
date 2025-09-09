@@ -110,6 +110,50 @@ TEST(InstallScript, RollsBackOnFailure){
     remove_all(pkg);
 }
 
+TEST(InstallScript, DeploysRecoverHook){
+    cleanupState();
+    remove("/etc/init.d/S95-upgrade-recover");
+    remove("/etc/rcS.d/S95-upgrade-recover");
+
+    path pkg = temp_directory_path()/"pkg_hook"; remove_all(pkg);
+    writeScript(pkg);
+    create_directories(pkg/"scripts"/"init"/"sysv");
+
+    // copy hook script and recovery script into package
+    {
+        std::ifstream in("FirmwarePackager/templates/scripts/init/sysv/S95-upgrade-recover");
+        std::ofstream out(pkg/"scripts"/"init"/"sysv"/"S95-upgrade-recover");
+        out<<in.rdbuf();
+    }
+    permissions(pkg/"scripts"/"init"/"sysv"/"S95-upgrade-recover", perms::owner_read|perms::owner_exec|perms::owner_write);
+
+    {
+        std::ifstream in("FirmwarePackager/templates/scripts/recover_boot.sh.in");
+        std::ofstream out(pkg/"scripts"/"recover_boot.sh");
+        out<<in.rdbuf();
+    }
+    permissions(pkg/"scripts"/"recover_boot.sh", perms::owner_read|perms::owner_exec|perms::owner_write);
+
+    std::ofstream manifest(pkg/"manifest.tsv");
+    manifest<<"relpath\tdest\tmode\towner\tgroup\tmd5\n";
+    manifest.close();
+
+    path archive = temp_directory_path()/"pkg_hook.tar.gz";
+    std::string cmd = "tar -czf " + archive.string() + " -C " + pkg.string() + " .";
+    ASSERT_EQ(std::system(cmd.c_str()),0);
+    int rc = std::system(("sh "+(pkg/"scripts"/"install.sh").string()+" --store "+archive.string()).c_str());
+    EXPECT_EQ(rc,0);
+
+    EXPECT_TRUE(exists("/etc/init.d/S95-upgrade-recover"));
+    EXPECT_TRUE(is_symlink("/etc/rcS.d/S95-upgrade-recover"));
+
+    remove("/etc/init.d/S95-upgrade-recover");
+    remove("/etc/rcS.d/S95-upgrade-recover");
+    cleanupState();
+    remove(archive);
+    remove_all(pkg);
+}
+
 int main(int argc, char** argv){
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
