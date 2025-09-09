@@ -21,7 +21,8 @@ public:
 class Packager : public IPackager {
 public:
     Packager(Scanner& scanner, Hasher& hasher, IManifestWriter& manifest,
-             IScriptWriter& script, IIdGenerator& idGen, ILogger& logger);
+             IScriptWriter& script, IIdGenerator& idGen, ILogger& logger,
+             std::filesystem::path templateRoot);
 
     Project buildProject(const std::filesystem::path& root, const Scanner::PathList& exclusions) override;
     void package(const Project& project) override;
@@ -33,6 +34,7 @@ private:
     IScriptWriter& script;
     IIdGenerator& idGen;
     ILogger& logger;
+    std::filesystem::path templateRoot;
 
     void createArchive(const std::filesystem::path& dir, const std::filesystem::path& archive);
 };

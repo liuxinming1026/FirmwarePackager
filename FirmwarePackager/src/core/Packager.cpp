@@ -15,8 +15,10 @@
 namespace core {
 
 Packager::Packager(Scanner& s, Hasher& h, IManifestWriter& m,
-                   IScriptWriter& sc, IIdGenerator& id, ILogger& log)
-    : scanner(s), hasher(h), manifest(m), script(sc), idGen(id), logger(log) {}
+                   IScriptWriter& sc, IIdGenerator& id, ILogger& log,
+                   std::filesystem::path tplRoot)
+    : scanner(s), hasher(h), manifest(m), script(sc), idGen(id), logger(log),
+      templateRoot(std::move(tplRoot)) {}
 
 Project Packager::buildProject(const std::filesystem::path& root, const Scanner::PathList& exclusions) {
     Project project(root.filename().string());
@@ -48,7 +50,7 @@ void Packager::package(const Project& project) {
 
     for (const auto& f : project.files) {
         auto src = project.rootDir / f.path;
-        auto destRoot = payloadDir / f.path;
+        auto destRoot = payloadDir / f.dest;
         if (f.recursive || std::filesystem::is_directory(src)) {
             if (!std::filesystem::exists(src)) continue;
             for (std::filesystem::recursive_directory_iterator it(src), end; it != end; ++it) {
@@ -67,7 +69,7 @@ void Packager::package(const Project& project) {
                     continue;
                 }
                 if (!it->is_regular_file()) continue;
-                auto dst = payloadDir / f.path / relToDir;
+                auto dst = payloadDir / f.dest / relToDir;
                 std::filesystem::create_directories(dst.parent_path());
                 std::filesystem::copy_file(it->path(), dst, std::filesystem::copy_options::overwrite_existing);
             }
@@ -79,7 +81,7 @@ void Packager::package(const Project& project) {
     }
 
     manifest.write(project, packageDir / "manifest.tsv");
-    script.write(project, packageDir, pkgId);
+    script.write(project, packageDir, pkgId, templateRoot);
 
     auto now = std::chrono::system_clock::now();
     std::time_t t = std::chrono::system_clock::to_time_t(now);

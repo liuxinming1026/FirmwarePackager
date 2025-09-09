@@ -37,7 +37,8 @@ TEST(PackagerTest, GeneratesArchiveWithExpectedContents) {
     core::IdGenerator idgen;
     core::ScriptWriter sw;
     SilentLogger logger;
-    core::Packager pack(scanner, hasher, mw, sw, idgen, logger);
+    auto tplRoot = current_path()/"FirmwarePackager/templates";
+    core::Packager pack(scanner, hasher, mw, sw, idgen, logger, tplRoot);
 
     core::Project project("pkg_root");
     project.rootDir = root;
@@ -46,7 +47,10 @@ TEST(PackagerTest, GeneratesArchiveWithExpectedContents) {
     core::FileEntry fe; fe.path="dir"; fe.dest="destdir"; fe.recursive=true; fe.excludes={"sub","exclude.txt"}; project.files.push_back(fe);
 
     auto cwd = current_path();
-    current_path("FirmwarePackager/FirmwarePackager");
+    path tmpCwd = temp_directory_path()/"pkg_cwd";
+    remove_all(tmpCwd);
+    create_directories(tmpCwd);
+    current_path(tmpCwd);
     pack.package(project);
     current_path(cwd);
 
@@ -78,18 +82,14 @@ TEST(PackagerTest, GeneratesArchiveWithExpectedContents) {
     std::vector<std::string> cols; std::stringstream ss(line); std::string c;
     while (std::getline(ss, c, '\t')) cols.push_back(c);
     ASSERT_EQ(cols.size(), 6u);
-    EXPECT_EQ(cols[0], "dir");
-    EXPECT_EQ(cols[1], "destdir");
-    ASSERT_TRUE(std::getline(mf, line));
-    cols.clear(); ss.clear(); ss.str(line);
-    while (std::getline(ss, c, '\t')) cols.push_back(c);
     EXPECT_EQ(cols[0], "dir/a.txt");
     EXPECT_EQ(cols[1], "destdir/a.txt");
     EXPECT_EQ(cols[5], hasher.md5File(root/"dir"/"a.txt"));
 
     path scriptPath = packageDir / "scripts" / "install.sh";
     ASSERT_TRUE(exists(scriptPath));
-    std::ifstream sf(scriptPath); std::stringstream buf; buf << sf.rdbuf(); std::string script = buf.str();
+    std::ifstream sf(scriptPath, std::ios::binary); std::stringstream buf; buf << sf.rdbuf(); std::string script = buf.str();
+    EXPECT_EQ(script.find('\r'), std::string::npos);
     EXPECT_NE(script.find(project.name), std::string::npos);
     EXPECT_NE(script.find(project.version), std::string::npos);
     EXPECT_EQ(script.find("@PKG_NAME@"), std::string::npos);

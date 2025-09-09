@@ -17,7 +17,8 @@ std::string replaceAll(std::string str, const std::string& from, const std::stri
 }
 
 void ScriptWriter::write(const Project& project, const std::filesystem::path& output,
-                         const std::string& pkgId) const {
+                         const std::string& pkgId,
+                         const std::filesystem::path& templateRoot) const {
     // scripts are always emitted into a "scripts" subdirectory of the output
     std::filesystem::path outRoot = output / "scripts";
     std::filesystem::create_directories(outRoot);
@@ -26,12 +27,12 @@ void ScriptWriter::write(const Project& project, const std::filesystem::path& ou
     std::string pkgName = project.name;
     std::string pkgVersion = project.version;
 
-    std::filesystem::path tplDir = std::filesystem::path("templates") / "scripts";
+    std::filesystem::path tplDir = templateRoot / "scripts";
 
     for (const auto& entry : std::filesystem::recursive_directory_iterator(tplDir)) {
         if (entry.is_directory()) continue;
 
-        std::ifstream in(entry.path());
+        std::ifstream in(entry.path(), std::ios::binary);
         if (!in) continue;
         std::stringstream buffer;
         buffer << in.rdbuf();
@@ -47,7 +48,7 @@ void ScriptWriter::write(const Project& project, const std::filesystem::path& ou
             outFile.replace_extension("");
         }
         std::filesystem::create_directories(outFile.parent_path());
-        std::ofstream out(outFile);
+        std::ofstream out(outFile, std::ios::binary);
         out << content;
         out.close();
         std::filesystem::permissions(
