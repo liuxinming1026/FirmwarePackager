@@ -7,10 +7,9 @@
 # Default-Stop:
 # Short-Description: Run recovery after upgrade
 ### END INIT INFO
-LAST_DIR="/opt/upgrade/last"
 case "$1" in
     start)
-        "$LAST_DIR/scripts/recover_boot.sh"
+        /opt/upgrade/last/scripts/recover_boot.sh
         ;;
     *)
         echo "Usage: $0 start" >&2

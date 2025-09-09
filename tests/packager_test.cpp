@@ -94,6 +94,9 @@ TEST(PackagerTest, GeneratesArchiveWithExpectedContents) {
     EXPECT_NE(script.find(project.version), std::string::npos);
     EXPECT_EQ(script.find("@PKG_NAME@"), std::string::npos);
 
+    path hookPath = packageDir / "scripts" / "init" / "sysv" / "S95-upgrade-recover";
+    EXPECT_TRUE(exists(hookPath));
+
     remove_all(root);
     remove_all(out);
     remove_all(extractDir);
