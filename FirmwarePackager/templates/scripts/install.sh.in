@@ -80,14 +80,21 @@ rollback() {
     done
 }
 
+acquire_lock() {
+    ln -s "$$" "$LOCK_FILE" 2>/dev/null
+}
+
+release_lock() {
+    rm -f "$LOCK_FILE"
+}
+
 fail() {
     trap - EXIT
     STATUS="FAIL"
     STEP="rollback"
     write_state
     rollback
-    flock -u 9 2>/dev/null || true
-    rm -f "$LOCK_FILE"
+    release_lock
     exit 1
 }
 
@@ -104,16 +111,14 @@ cleanup_success() {
     fi
     rm -f "$JOURNAL" "$PKG_TGZ"
     rm -rf "$BACKUP_DIR"
-    flock -u 9 2>/dev/null || true
-    rm -f "$LOCK_FILE"
+    release_lock
 }
 
 trap fail INT TERM HUP QUIT
 trap fail EXIT
 
 mkdir -p "$STATE_DIR" "$PKG_DIR" "$BACKUP_DIR" "$LOCK_DIR"
-exec 9>"$LOCK_FILE"
-if ! flock -n 9; then
+if ! acquire_lock; then
     echo "Another upgrade is in progress" >&2
     exit 1
 fi
