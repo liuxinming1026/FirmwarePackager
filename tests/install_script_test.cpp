@@ -48,6 +48,7 @@ void cleanupState(){
     remove_all("/opt/upgrade/backup/TESTPKG");
     remove("/opt/upgrade/state/TESTPKG.state");
     remove("/opt/upgrade/state/TESTPKG.journal");
+    remove("/opt/upgrade/packages/TESTPKG.tar.gz");
 }
 }
 
@@ -61,13 +62,17 @@ TEST(InstallScript, DetectsMd5Mismatch){
     manifest<<"file.txt\t"<<(pkg/"out.txt").string()<<"\t0644\troot\troot\tdeadbeefdeadbeefdeadbeefdeadbeef\n";
     manifest.close();
 
-    int rc = std::system(("sh "+(pkg/"scripts"/"install.sh").string()).c_str());
+    path archive = temp_directory_path()/"pkg_md5.tar.gz";
+    std::string cmd = "tar -czf " + archive.string() + " -C " + pkg.string() + " .";
+    ASSERT_EQ(std::system(cmd.c_str()),0);
+    int rc = std::system(("sh "+(pkg/"scripts"/"install.sh").string()+" --store "+archive.string()).c_str());
     EXPECT_NE(rc,0);
     EXPECT_FALSE(exists(pkg/"out.txt"));
     std::ifstream st("/opt/upgrade/state/TESTPKG.state");
     std::stringstream s; s<<st.rdbuf();
-    EXPECT_NE(s.str().find("STATUS=ERROR"), std::string::npos);
+    EXPECT_NE(s.str().find("STATUS=FAIL"), std::string::npos);
     cleanupState();
+    remove(archive);
     remove_all(pkg);
 }
 
@@ -86,11 +91,15 @@ TEST(InstallScript, RollsBackOnFailure){
     manifest<<"b.txt\t"<<destB.string()<<"\t0644\troot\troot\t00000000000000000000000000000000\n";
     manifest.close();
 
-    int rc = std::system(("sh "+(pkg/"scripts"/"install.sh").string()).c_str());
+    path archive = temp_directory_path()/"pkg_rb.tar.gz";
+    std::string cmd = "tar -czf " + archive.string() + " -C " + pkg.string() + " .";
+    ASSERT_EQ(std::system(cmd.c_str()),0);
+    int rc = std::system(("sh "+(pkg/"scripts"/"install.sh").string()+" --store "+archive.string()).c_str());
     EXPECT_NE(rc,0);
     std::ifstream in(destA); std::string data; std::getline(in,data); EXPECT_EQ(data,"oldA");
     EXPECT_FALSE(exists(destB));
     cleanupState();
+    remove(archive);
     remove_all(pkg);
 }
 
