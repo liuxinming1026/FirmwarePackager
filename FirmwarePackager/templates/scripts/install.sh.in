@@ -19,6 +19,8 @@ PKG_TGZ="${PKG_DIR}/${PKG_ID}.tar.gz"
 LOCK_DIR="/opt/upgrade/locks"
 LOCK_FILE="${LOCK_DIR}/upgrade.lock"
 
+PKG_ROOT=$(cd "$(dirname "$0")/.." && pwd)
+
 STATUS="INIT"
 STEP=""
 LAST_FILE=""
@@ -127,12 +129,33 @@ else
     write_state
     if [ -n "$STORE" ]; then
         cp "$STORE" "$PKG_TGZ"
+    else
+        pkg_parent=$(cd "$PKG_ROOT/.." && pwd)
+        src=$(ls "$pkg_parent"/*.tar.gz 2>/dev/null | head -n 1)
+        if [ -n "$src" ] && [ -f "$src" ]; then
+            cp "$src" "$PKG_TGZ"
+        fi
     fi
     STEP="install"
     write_state
 fi
 
-BASE_DIR=$(cd "$(dirname "$0")/.." && pwd)
+BASE_DIR="$PKG_ROOT"
+
+LAST_DIR="/opt/upgrade/last"
+mkdir -p "$LAST_DIR"
+rm -rf "$LAST_DIR/scripts"
+cp -r "$BASE_DIR/scripts" "$LAST_DIR/"
+
+HOOK_SRC="$BASE_DIR/scripts/init/sysv/S95-upgrade-recover"
+if [ -f "$HOOK_SRC" ]; then
+    mkdir -p /etc/init.d /etc/rcS.d
+    cp "$HOOK_SRC" /etc/init.d/
+    chmod +x /etc/init.d/S95-upgrade-recover 2>/dev/null || true
+    if [ ! -e /etc/rcS.d/S95-upgrade-recover ]; then
+        ln -s ../init.d/S95-upgrade-recover /etc/rcS.d/S95-upgrade-recover
+    fi
+fi
 
 if [ "$STEP" = "install" ]; then
     SKIP=0
