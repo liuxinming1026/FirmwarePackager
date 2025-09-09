@@ -1,8 +1,8 @@
 # Installer State Machine
 
 The generated `install.sh` script performs upgrades using a small
-state machine.  Progress is persisted under `/opt/upgrade/state` to
-survive power loss or reboots.
+state machine.  Progress is persisted under `/opt/upgrade/state` and
+`/opt/upgrade/journal` to survive power loss or reboots.
 
 ## States
 
@@ -11,7 +11,7 @@ survive power loss or reboots.
   installed.
 * **BACKUP** – Individual payload files are verified, backed up and
   replaced. Each successfully installed file is appended to the journal
-  file `/opt/upgrade/state/<PKG_ID>.journal`.
+  file `/opt/upgrade/journal/<PKG_ID>.journal`.
 * **COMMIT** – All files have been applied and the system is ready to
   finalize the upgrade.
 * **DONE** – Installation completed. State and journal files are
