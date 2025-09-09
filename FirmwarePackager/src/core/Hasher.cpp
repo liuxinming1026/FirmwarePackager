@@ -70,8 +70,21 @@ std::string Hasher::md5(const std::vector<uint8_t>& data) const {
 std::string Hasher::md5File(const std::filesystem::path& path) const {
     std::ifstream in(path, std::ios::binary);
     if (!in.is_open()) return {};
-    std::vector<uint8_t> data(std::istreambuf_iterator<char>(in), {});
-    return md5(data);
+
+    MD5_CTX ctx;
+    MD5_Init(&ctx);
+
+    std::array<char, 4096> buf;
+    while (in) {
+        in.read(buf.data(), buf.size());
+        std::streamsize readBytes = in.gcount();
+        if (readBytes > 0)
+            MD5_Update(&ctx, buf.data(), static_cast<size_t>(readBytes));
+    }
+
+    std::array<uint8_t,16> digest{};
+    MD5_Final(digest.data(), &ctx);
+    return toHex(digest);
 }
 
 std::string Hasher::md5Directory(const std::filesystem::path& path) const {

@@ -42,6 +42,18 @@ TEST(HasherTest, Md5FileMatchesReference) {
     remove(tmp);
 }
 
+TEST(HasherTest, Md5FileHandlesLargeFiles) {
+    path tmp = temp_directory_path() / "hasher_large.bin";
+    {
+        std::ofstream out(tmp, std::ios::binary);
+        for (size_t i = 0; i < (1 << 20); ++i)
+            out.put(static_cast<char>(i & 0xFF));
+    }
+    core::Hasher h;
+    EXPECT_EQ(h.md5File(tmp), md5FileRef(tmp));
+    remove(tmp);
+}
+
 TEST(HasherTest, Md5DirectoryAggregatesChildren) {
     path dir = temp_directory_path() / "hasher_dir";
     remove_all(dir);
