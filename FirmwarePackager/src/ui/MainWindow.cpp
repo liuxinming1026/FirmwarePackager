@@ -166,11 +166,20 @@ void MainWindow::populateTable(const core::Project& project) {
         model->setData(model->index(row, 3), QString::fromStdString(file.mode));
         model->setData(model->index(row, 4), QString::fromStdString(file.owner));
         model->setData(model->index(row, 5), QString::fromStdString(file.group));
-        model->setData(model->index(row, 6), file.recursive ? "Yes" : "No");
-        QStringList exList;
-        for (const auto& ex : file.excludes)
-            exList << QString::fromStdString(ex.string());
-        model->setData(model->index(row, 7), exList.join(","));
+        bool isDir = file.recursive;
+        if (!isDir) {
+            std::error_code ec; // avoid exceptions
+            isDir = std::filesystem::is_directory(project.rootDir / file.path, ec);
+        }
+        model->setData(model->index(row, 6), isDir ? "Yes" : "No");
+        if (isDir) {
+            model->setData(model->index(row, 7), "");
+        } else {
+            QStringList exList;
+            for (const auto& ex : file.excludes)
+                exList << QString::fromStdString(ex.string());
+            model->setData(model->index(row, 7), exList.join(","));
+        }
         model->setData(model->index(row, 8), QString::fromStdString(file.hash));
         ++row;
     }
@@ -224,11 +233,20 @@ void MainWindow::editMapping() {
         model->setData(model->index(row, 3), QString::fromStdString(entry.mode));
         model->setData(model->index(row, 4), QString::fromStdString(entry.owner));
         model->setData(model->index(row, 5), QString::fromStdString(entry.group));
-        model->setData(model->index(row, 6), entry.recursive ? "Yes" : "No");
-        QStringList exList;
-        for (const auto& ex : entry.excludes)
-            exList << QString::fromStdString(ex.string());
-        model->setData(model->index(row, 7), exList.join(","));
+        bool isDir = entry.recursive;
+        if (!isDir) {
+            std::error_code ec;
+            isDir = std::filesystem::is_directory(currentProject.rootDir / entry.path, ec);
+        }
+        model->setData(model->index(row, 6), isDir ? "Yes" : "No");
+        if (isDir) {
+            model->setData(model->index(row, 7), "");
+        } else {
+            QStringList exList;
+            for (const auto& ex : entry.excludes)
+                exList << QString::fromStdString(ex.string());
+            model->setData(model->index(row, 7), exList.join(","));
+        }
     }
 }
 
@@ -266,17 +284,14 @@ void MainWindow::addFolder() {
         return;
     std::filesystem::path root = rootEdit->text().toStdString();
     std::filesystem::path folder = dir.toStdString();
-    auto paths = scanner.scan(folder, {});
-    for (const auto& p : paths) {
-        std::error_code ec;
-        auto rel = std::filesystem::relative(p, root, ec);
-        if (ec || rel.empty() || rel.native().rfind("..", 0) == 0)
-            continue;
-        std::ifstream in(p, std::ios::binary);
-        std::vector<uint8_t> data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-        std::string hash = hasher.md5(data);
-        std::string id = idGen.generate();
-        currentProject.files.emplace_back(rel, id, hash);
+    std::error_code ec;
+    auto rel = std::filesystem::relative(folder, root, ec);
+    if (!ec && !rel.empty() && rel.native().rfind("..", 0) != 0) {
+        core::FileEntry entry;
+        entry.path = rel;
+        entry.dest = rel;
+        entry.recursive = true;
+        currentProject.files.push_back(entry);
     }
     populateTable(currentProject);
 }

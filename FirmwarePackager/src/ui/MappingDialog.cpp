@@ -37,7 +37,9 @@ MappingDialog::MappingDialog(core::FileEntry& entry, QWidget* parent)
     for (const auto& e : fileEntry.excludes)
         ex << QString::fromStdString(e.string());
     excludesEdit = new QLineEdit(ex.join(","));
+    excludesEdit->setEnabled(fileEntry.recursive);
     layout->addRow("Excludes", excludesEdit);
+    connect(recursiveCheck, &QCheckBox::toggled, excludesEdit, &QWidget::setEnabled);
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
     connect(buttons, &QDialogButtonBox::accepted, this, &MappingDialog::accept);
