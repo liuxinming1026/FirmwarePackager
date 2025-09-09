@@ -16,6 +16,7 @@ Project ProjectSerializer::load(const std::string& filePath) const {
     Project project;
     project.name = j.value("name", "");
     project.version = j.value("version", "");
+    project.pkgId = j.value("pkgId", "");
     project.rootDir = j.value("rootDir", "");
     project.outputDir = j.value("outputDir", "");
     if (j.contains("files")) {
@@ -43,6 +44,7 @@ void ProjectSerializer::save(const Project& project, const std::string& filePath
     json j;
     j["name"] = project.name;
     j["version"] = project.version;
+    j["pkgId"] = project.pkgId;
     j["rootDir"] = project.rootDir.string();
     j["outputDir"] = project.outputDir.string();
     j["files"] = json::array();
