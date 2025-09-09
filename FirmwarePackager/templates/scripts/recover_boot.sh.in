@@ -8,21 +8,32 @@ PKG_DIR="/opt/upgrade/packages"
 
 for st in "$STATE_DIR"/*.state; do
     [ -e "$st" ] || continue
+
+    # Skip packages that have already finished
     status=$(grep '^STATUS=' "$st" | cut -d= -f2)
     if [ "$status" = "SUCCESS" ] || [ "$status" = "FAIL" ]; then
         continue
     fi
+
     ID=$(basename "$st" .state)
     ARCHIVE="$PKG_DIR/${ID}.tar.gz"
     [ -f "$ARCHIVE" ] || continue
+
     TMP="$(mktemp -d)"
     tar -xzf "$ARCHIVE" -C "$TMP"
+
     if [ -f "$TMP/package/scripts/install.sh" ]; then
-        (
+        if (
             cd "$TMP/package" && ./scripts/install.sh --resume
-        )
+        ); then
+            rm -rf "$TMP"
+        else
+            echo "Installation failed for $ID; leaving $TMP for inspection" >&2
+            exit 1
+        fi
+    else
+        rm -rf "$TMP"
     fi
-    rm -rf "$TMP"
 done
 
 exit 0
