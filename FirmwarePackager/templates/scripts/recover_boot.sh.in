@@ -5,6 +5,7 @@
 
 STATE_DIR="/opt/upgrade/state"
 PKG_DIR="/opt/upgrade/packages"
+JOURNAL_DIR="/opt/upgrade/journal"
 
 for st in "$STATE_DIR"/*.state; do
     [ -e "$st" ] || continue

@@ -47,7 +47,7 @@ void writeScript(const path& dir){
 void cleanupState(){
     remove_all("/opt/upgrade/backup/TESTPKG");
     remove("/opt/upgrade/state/TESTPKG.state");
-    remove("/opt/upgrade/state/TESTPKG.journal");
+    remove("/opt/upgrade/journal/TESTPKG.journal");
     remove("/opt/upgrade/packages/TESTPKG.tar.gz");
 }
 }
