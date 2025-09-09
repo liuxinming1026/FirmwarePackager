@@ -3,11 +3,11 @@
 namespace core {
 
 FileEntry::FileEntry()
-    : recursive(false) {}
+    : owner("root"), group("root"), recursive(false) {}
 
 FileEntry::FileEntry(std::filesystem::path p, std::string i, std::string h)
     : path(std::move(p)), dest(path), id(std::move(i)), hash(std::move(h)),
-      mode(""), owner(""), group(""), recursive(false) {}
+      mode(""), owner("root"), group("root"), recursive(false) {}
 
 Project::Project() = default;
 
