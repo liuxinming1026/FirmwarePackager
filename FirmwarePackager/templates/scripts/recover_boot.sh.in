@@ -10,8 +10,8 @@ for st in "$STATE_DIR"/*.state; do
     [ -e "$st" ] || continue
 
     # Skip packages that have already finished
-    status=$(grep '^STATUS=' "$st" | cut -d= -f2)
-    if [ "$status" = "SUCCESS" ] || [ "$status" = "FAIL" ]; then
+    step=$(grep '^STEP=' "$st" | cut -d= -f2)
+    if [ "$step" = "DONE" ] || [ "$step" = "FAILED" ]; then
         continue
     fi
 
