@@ -76,6 +76,7 @@ TEST(InstallScript, DetectsMd5Mismatch){
     std::ifstream st("/opt/upgrade/state/TESTPKG.state");
     std::stringstream s; s<<st.rdbuf();
     EXPECT_NE(s.str().find("STEP=FAILED"), std::string::npos);
+    EXPECT_NE(s.str().find("STATUS=FAIL"), std::string::npos);
     cleanupState();
     remove(archive);
     remove_all(pkg);
