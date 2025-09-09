@@ -4,7 +4,7 @@
 # Verifies files listed in manifest.tsv using MD5 hashes and performs
 # atomic updates with rollback support.
 
-set -e
+set -eu
 
 PKG_ID="@PKG_ID@"
 PKG_NAME="@PKG_NAME@"
@@ -22,6 +22,15 @@ LAST_DIR="/opt/upgrade/last"
 
 PKG_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 
+LOG_DIR="/opt/upgrade/logs"
+LOG_TS="$(date +%Y%m%d%H%M%S)"
+LOG_FILE="${LOG_DIR}/${PKG_ID}-${LOG_TS}.log"
+
+log() {
+    mkdir -p "$LOG_DIR"
+    printf '%s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*" | tee -a "$LOG_FILE"
+}
+
 STATUS="INIT"
 STEP=""
 LAST_FILE=""
@@ -38,7 +47,7 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         *)
-            echo "Usage: $0 [--resume] [--store <archive>]" >&2
+            log "Usage: $0 [--resume] [--store <archive>]" >&2
             exit 1
             ;;
     esac
@@ -110,7 +119,7 @@ cleanup_success() {
             done
         } < "$BASE_DIR/manifest.tsv"
     fi
-    rm -f "$JOURNAL" "$PKG_TGZ"
+    rm -f "$JOURNAL" "$STATE_FILE" "$PKG_TGZ"
     rm -rf "$BACKUP_DIR"
     release_lock
 }
@@ -120,7 +129,7 @@ trap fail EXIT
 
 mkdir -p "$STATE_DIR" "$PKG_DIR" "$BACKUP_DIR" "$LOCK_DIR"
 if ! acquire_lock; then
-    echo "Another upgrade is in progress" >&2
+    log "Another upgrade is in progress" >&2
     exit 1
 fi
 
