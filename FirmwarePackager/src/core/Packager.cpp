@@ -47,7 +47,7 @@ void Packager::package(const Project& project) {
 
     for (const auto& f : project.files) {
         auto src = project.rootDir / f.path;
-        auto destRoot = payloadDir / f.dest;
+        auto destRoot = payloadDir / f.path;
         if (f.recursive || std::filesystem::is_directory(src)) {
             if (!std::filesystem::exists(src)) continue;
             for (std::filesystem::recursive_directory_iterator it(src), end; it != end; ++it) {
@@ -66,7 +66,7 @@ void Packager::package(const Project& project) {
                     continue;
                 }
                 if (!it->is_regular_file()) continue;
-                auto dst = destRoot / relToDir;
+                auto dst = payloadDir / f.path / relToDir;
                 std::filesystem::create_directories(dst.parent_path());
                 std::filesystem::copy_file(it->path(), dst, std::filesystem::copy_options::overwrite_existing);
             }
@@ -116,22 +116,36 @@ void Packager::createArchive(const std::filesystem::path& dir, const std::filesy
     archive_write_open_filename(a, archive.string().c_str());
 
     auto base = dir.filename();
+    {
+        struct archive_entry* e = archive_entry_new();
+        archive_entry_set_pathname(e, base.string().c_str());
+        archive_entry_set_filetype(e, AE_IFDIR);
+        auto mode = static_cast<int>(std::filesystem::status(dir).permissions()) & 0777;
+        archive_entry_set_perm(e, mode);
+        archive_write_header(a, e);
+        archive_entry_free(e);
+    }
     for (const auto& entry : std::filesystem::recursive_directory_iterator(dir)) {
-        if (!entry.is_regular_file()) continue;
         auto relInside = std::filesystem::relative(entry.path(), dir);
         auto rel = base / relInside;
         struct archive_entry* e = archive_entry_new();
         archive_entry_set_pathname(e, rel.string().c_str());
-        archive_entry_set_size(e, std::filesystem::file_size(entry.path()));
-        archive_entry_set_filetype(e, AE_IFREG);
-        archive_entry_set_perm(e, 0644);
-        archive_write_header(a, e);
-        std::ifstream in(entry.path(), std::ios::binary);
-        char buf[8192];
-        while (in) {
-            in.read(buf, sizeof(buf));
-            auto len = in.gcount();
-            if (len > 0) archive_write_data(a, buf, len);
+        auto mode = static_cast<int>(std::filesystem::status(entry.path()).permissions()) & 0777;
+        archive_entry_set_perm(e, mode);
+        if (entry.is_directory()) {
+            archive_entry_set_filetype(e, AE_IFDIR);
+            archive_write_header(a, e);
+        } else if (entry.is_regular_file()) {
+            archive_entry_set_size(e, std::filesystem::file_size(entry.path()));
+            archive_entry_set_filetype(e, AE_IFREG);
+            archive_write_header(a, e);
+            std::ifstream in(entry.path(), std::ios::binary);
+            char buf[8192];
+            while (in) {
+                in.read(buf, sizeof(buf));
+                auto len = in.gcount();
+                if (len > 0) archive_write_data(a, buf, len);
+            }
         }
         archive_entry_free(e);
     }
