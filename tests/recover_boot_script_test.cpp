@@ -102,7 +102,7 @@ TEST(RecoverBootScript, SkipsFinishedInstallations) {
     remove_all(stateDir);
 }
 
-TEST(RecoverBootScript, RetriesFailedInstallations) {
+TEST(RecoverBootScript, SkipsFailedInstallations) {
     path stateDir = "/opt/upgrade/state";
     path pkgDir = "/opt/upgrade/packages";
     remove_all(stateDir);
@@ -140,7 +140,7 @@ TEST(RecoverBootScript, RetriesFailedInstallations) {
 
     ASSERT_EQ(std::system(script.string().c_str()), 0);
 
-    EXPECT_TRUE(exists("/tmp/install_called"));
+    EXPECT_FALSE(exists("/tmp/install_called"));
     remove("/tmp/install_called");
 
     remove_all(temp);
