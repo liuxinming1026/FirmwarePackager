@@ -61,6 +61,29 @@ TEST(ManifestWriterTest, ExpandsDirectoriesAndWritesColumns){
     remove_all(tmp);
 }
 
+TEST(ManifestWriterTest, AppliesExclusions){
+    auto tmp = temp_directory_path()/"fp_excl";
+    remove_all(tmp);
+    create_directories(tmp/"dir"/"keep");
+    create_directories(tmp/"dir"/"skip");
+    { std::ofstream(tmp/"dir"/"keep"/"a.txt")<<"hi"; }
+    { std::ofstream(tmp/"dir"/"skip"/"b.txt")<<"bye"; }
+
+    core::Project project; project.rootDir = tmp;
+    core::FileEntry fe; fe.path="dir"; fe.dest="dest"; fe.recursive=true; fe.excludes={"skip"}; project.files.push_back(fe);
+
+    core::ManifestWriter writer; auto manifestPath = tmp/"manifest.tsv"; writer.write(project, manifestPath);
+
+    std::ifstream in(manifestPath);
+    ASSERT_TRUE(in.is_open());
+    std::string line; std::getline(in,line); // header
+    ASSERT_TRUE(std::getline(in,line));
+    EXPECT_NE(line.find("dest/keep/a.txt"), std::string::npos);
+    EXPECT_EQ(line.find("skip"), std::string::npos);
+
+    remove_all(tmp);
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
