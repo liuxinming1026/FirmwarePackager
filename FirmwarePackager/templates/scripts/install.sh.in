@@ -66,6 +66,8 @@ STATE
 }
 
 rollback() {
+    STATUS="ROLLBACK"
+    write_state
     [ -f "$JOURNAL_FILE" ] || return 0
     awk '{l[NR]=$0} END{for(i=NR;i>=1;i--) print l[i]}' "$JOURNAL_FILE" | \
     while IFS="|" read -r action dest backup; do
@@ -102,9 +104,9 @@ release_lock() {
 fail() {
     trap - EXIT
     STEP="FAILED"
+    rollback
     STATUS="FAIL"
     write_state
-    rollback
     release_lock
     exit 1
 }
@@ -243,10 +245,12 @@ if [ "$STEP" = "BACKUP" ]; then
     write_state
 fi
 
-trap - EXIT
-STEP="DONE"
-LAST_FILE=""
-STATUS="SUCCESS"
-write_state
-cleanup_success
-exit 0
+if [ "$STEP" = "COMMIT" ]; then
+    trap - EXIT
+    STEP="DONE"
+    LAST_FILE=""
+    STATUS="SUCCESS"
+    write_state
+    cleanup_success
+    exit 0
+fi

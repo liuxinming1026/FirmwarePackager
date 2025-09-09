@@ -148,6 +148,59 @@ TEST(RecoverBootScript, SkipsFailedInstallations) {
     remove_all(stateDir);
 }
 
+TEST(RecoverBootScript, HandlesRollbackStatus) {
+    path stateDir = "/opt/upgrade/state";
+    path pkgDir = "/opt/upgrade/packages";
+    remove_all(stateDir);
+    remove_all(pkgDir);
+    create_directories(stateDir);
+    create_directories(pkgDir);
+
+    std::string id = "testpkg";
+    path stateFile = stateDir / (id + ".state");
+    { std::ofstream(stateFile) << "STEP=PREPARE\nSTATUS=ROLLBACK\n"; }
+
+    path temp = temp_directory_path() / "recover_pkg_rollback";
+    remove_all(temp);
+    create_directories(temp / "package/scripts");
+
+    path install = temp / "package/scripts/install.sh";
+    {
+        std::ofstream out(install);
+        out << "#!/bin/sh\n";
+        out << "echo \"$1\" >> /tmp/install_args\n";
+    }
+    permissions(install, perms::owner_read | perms::owner_write | perms::owner_exec);
+
+    path archive = pkgDir / (id + ".tar.gz");
+    std::string cmd = "tar -czf " + archive.string() + " -C " + temp.string() + " package";
+    ASSERT_EQ(std::system(cmd.c_str()), 0);
+
+    path script = temp_directory_path() / "recover_boot.sh";
+    {
+        std::ifstream in("FirmwarePackager/templates/scripts/recover_boot.sh.in");
+        std::ofstream out(script);
+        out << in.rdbuf();
+    }
+    permissions(script, perms::owner_read | perms::owner_write | perms::owner_exec);
+
+    ASSERT_EQ(std::system(script.string().c_str()), 0);
+
+    std::ifstream arg("/tmp/install_args");
+    std::string line;
+    size_t count = 0;
+    while (std::getline(arg, line)) {
+        ++count;
+        EXPECT_EQ(line, "--resume");
+    }
+    EXPECT_EQ(count, 2u);
+    remove("/tmp/install_args");
+
+    remove_all(temp);
+    remove_all(pkgDir);
+    remove_all(stateDir);
+}
+
 TEST(RecoverBootScript, LeavesTempDirOnInstallError) {
     path stateDir = "/opt/upgrade/state";
     path pkgDir = "/opt/upgrade/packages";

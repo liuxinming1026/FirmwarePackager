@@ -24,7 +24,17 @@ for st in "$STATE_DIR"/*.state; do
     tar -xzf "$ARCHIVE" -C "$TMP"
 
     if [ -f "$TMP/package/scripts/install.sh" ]; then
-        if (
+        if [ "$status" = "ROLLBACK" ]; then
+            if ! (cd "$TMP/package" && ./scripts/install.sh --resume); then
+                echo "Installation failed for $ID; leaving $TMP for inspection" >&2
+                exit 1
+            fi
+            if ! (cd "$TMP/package" && ./scripts/install.sh --resume); then
+                echo "Installation failed for $ID; leaving $TMP for inspection" >&2
+                exit 1
+            fi
+            rm -rf "$TMP"
+        elif (
             cd "$TMP/package" && ./scripts/install.sh --resume
         ); then
             rm -rf "$TMP"
