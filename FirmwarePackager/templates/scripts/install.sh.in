@@ -18,6 +18,7 @@ JOURNAL="${STATE_DIR}/${PKG_ID}.journal"
 PKG_TGZ="${PKG_DIR}/${PKG_ID}.tar.gz"
 LOCK_DIR="/opt/upgrade/locks"
 LOCK_FILE="${LOCK_DIR}/upgrade.lock"
+LAST_DIR="/opt/upgrade/last"
 
 PKG_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 
@@ -146,13 +147,12 @@ else
 fi
 
 BASE_DIR="$PKG_ROOT"
-
-LAST_DIR="/opt/upgrade/last"
+# Step 2: make recovery scripts available in the last directory
 mkdir -p "$LAST_DIR"
 rm -rf "$LAST_DIR/scripts"
 cp -r "$BASE_DIR/scripts" "$LAST_DIR/"
 
-HOOK_SRC="$BASE_DIR/scripts/init/sysv/S95-upgrade-recover"
+HOOK_SRC="$LAST_DIR/scripts/init/sysv/S95-upgrade-recover"
 if [ -f "$HOOK_SRC" ]; then
     mkdir -p /etc/init.d /etc/rcS.d
     cp "$HOOK_SRC" /etc/init.d/
