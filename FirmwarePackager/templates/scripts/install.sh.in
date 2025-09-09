@@ -94,7 +94,7 @@ rollback() {
 }
 
 acquire_lock() {
-    ln -s "$$" "$LOCK_FILE" 2>/dev/null
+    ln -s "$$" "$LOCK_FILE" 2>/dev/null || return 1
 }
 
 release_lock() {
