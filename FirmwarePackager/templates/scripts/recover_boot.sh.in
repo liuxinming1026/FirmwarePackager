@@ -8,6 +8,10 @@ PKG_DIR="/opt/upgrade/packages"
 
 for st in "$STATE_DIR"/*.state; do
     [ -e "$st" ] || continue
+    status=$(grep '^STATUS=' "$st" | cut -d= -f2)
+    if [ "$status" = "SUCCESS" ] || [ "$status" = "FAIL" ]; then
+        continue
+    fi
     ID=$(basename "$st" .state)
     ARCHIVE="$PKG_DIR/${ID}.tar.gz"
     [ -f "$ARCHIVE" ] || continue

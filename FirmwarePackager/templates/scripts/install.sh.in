@@ -15,11 +15,30 @@ PKG_DIR="/opt/upgrade/packages"
 BACKUP_DIR="/opt/upgrade/backup/${PKG_ID}"
 STATE_FILE="${STATE_DIR}/${PKG_ID}.state"
 JOURNAL="${STATE_DIR}/${PKG_ID}.journal"
-PKG_TGZ="${PKG_DIR}/${PKG_ID}.tgz"
+PKG_TGZ="${PKG_DIR}/${PKG_ID}.tar.gz"
 
 STATUS="INIT"
 STEP=""
 LAST_FILE=""
+STORE=""
+RESUME=0
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --resume)
+            RESUME=1
+            ;;
+        --store)
+            STORE="$2"
+            shift
+            ;;
+        *)
+            echo "Usage: $0 [--resume] [--store <archive>]" >&2
+            exit 1
+            ;;
+    esac
+    shift
+done
 
 write_state() {
 cat >"$STATE_FILE" <<STATE
@@ -44,7 +63,8 @@ rollback() {
 
 fail() {
     trap - EXIT
-    STATUS="ERROR"
+    STATUS="FAIL"
+    STEP="rollback"
     write_state
     rollback
     exit 1
@@ -58,53 +78,73 @@ cleanup_success() {
     fi
     rm -f "$JOURNAL"
     rm -rf "$BACKUP_DIR"
-    rm -f "$PKG_TGZ"
 }
 
 trap fail INT TERM HUP QUIT
 trap fail EXIT
 
 mkdir -p "$STATE_DIR" "$PKG_DIR" "$BACKUP_DIR"
-: > "$JOURNAL"
+
+if [ "$RESUME" -eq 1 ]; then
+    [ -f "$STATE_FILE" ] || exit 1
+    . "$STATE_FILE"
+    [ -f "$JOURNAL" ] || : > "$JOURNAL"
+else
+    : > "$JOURNAL"
+    STATUS="RUNNING"
+    STEP="store"
+    write_state
+    if [ -n "$STORE" ]; then
+        cp "$STORE" "$PKG_TGZ"
+    fi
+    STEP="install"
+    write_state
+fi
 
 BASE_DIR=$(cd "$(dirname "$0")/.." && pwd)
 
-STATUS="RUNNING"
-STEP="install"
-write_state
+if [ "$STEP" = "install" ]; then
+    SKIP=0
+    if [ "$RESUME" -eq 1 ] && [ -n "$LAST_FILE" ]; then
+        SKIP=1
+    fi
+    {
+        read -r _header
+        while IFS="$(printf '\t')" read -r rel dest mode owner group md5; do
+            if [ -z "$rel" ] || [ "${rel#\#}" != "$rel" ]; then
+                continue
+            fi
+            if [ "$SKIP" -eq 1 ]; then
+                [ "$dest" = "$LAST_FILE" ] && SKIP=0
+                continue
+            fi
+            LAST_FILE="$dest"
+            write_state
 
-{
-    read -r _header
-    while IFS="$(printf '\t')" read -r rel dest mode owner group md5; do
-        if [ -z "$rel" ] || [ "${rel#\#}" != "$rel" ]; then
-            continue
-        fi
-        LAST_FILE="$dest"
-        write_state
+            calc=$(md5sum "$BASE_DIR/$rel" | awk '{print $1}')
+            [ "$calc" = "$md5" ] || fail
 
-        calc=$(md5sum "$BASE_DIR/$rel" | awk '{print $1}')
-        [ "$calc" = "$md5" ] || fail
+            ddir=$(dirname "$dest")
+            mkdir -p "$ddir"
 
-        ddir=$(dirname "$dest")
-        mkdir -p "$ddir"
+            if [ -f "$dest" ]; then
+                backup="$BACKUP_DIR/$dest"
+                mkdir -p "$(dirname "$backup")"
+                cp "$dest" "$backup"
+                mv "$dest" "$dest.old"
+            fi
 
-        if [ -f "$dest" ]; then
-            backup="$BACKUP_DIR/$dest"
-            mkdir -p "$(dirname "$backup")"
-            cp "$dest" "$backup"
-            mv "$dest" "$dest.old"
-        fi
+            cp "$BASE_DIR/$rel" "$dest.new"
+            chmod "$mode" "$dest.new" 2>/dev/null || true
+            mv "$dest.new" "$dest"
+            echo "$dest" >> "$JOURNAL"
 
-        cp "$BASE_DIR/$rel" "$dest.new"
-        chmod "$mode" "$dest.new" 2>/dev/null || true
-        mv "$dest.new" "$dest"
-        echo "$dest" >> "$JOURNAL"
-
-    done
-} < "$BASE_DIR/manifest.tsv"
+        done
+    } < "$BASE_DIR/manifest.tsv"
+fi
 
 trap - EXIT
-STATUS="DONE"
+STATUS="SUCCESS"
 STEP="done"
 LAST_FILE=""
 write_state
