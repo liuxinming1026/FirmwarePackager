@@ -1,6 +1,8 @@
 #include "ProjectSerializer.h"
 
 #include <fstream>
+#include <filesystem>
+#include <system_error>
 #include <nlohmann/json.hpp>
 
 namespace core {
@@ -33,6 +35,12 @@ Project ProjectSerializer::load(const std::string& filePath) const {
             if (item.contains("excludes")) {
                 for (const auto& ex : item["excludes"])
                     entry.excludes.push_back(ex.get<std::string>());
+            }
+            if (entry.mode.empty()) {
+                std::error_code ec;
+                bool isDir = entry.recursive ||
+                              std::filesystem::is_directory(project.rootDir / entry.path, ec);
+                entry.mode = isDir ? "0755" : "0644";
             }
             project.files.push_back(entry);
         }

@@ -297,6 +297,7 @@ void MainWindow::addFolder() {
         entry.path = rel;
         entry.dest = rel;
         entry.recursive = true;
+        entry.mode = "0755";
         currentProject.files.push_back(entry);
     }
     populateTable(currentProject);
