@@ -60,7 +60,8 @@ TEST(InstallScript, DetectsMd5Mismatch){
     cleanupState();
     path pkg = temp_directory_path()/"pkg_md5"; remove_all(pkg);
     writeScript(pkg);
-    { std::ofstream(pkg/"file.txt")<<"data"; }
+    create_directories(pkg/"payload");
+    { std::ofstream(pkg/"payload"/"file.txt")<<"data"; }
     std::ofstream manifest(pkg/"manifest.tsv");
     manifest<<"relpath\tdest\tmode\towner\tgroup\tmd5\n";
     manifest<<"file.txt\t"<<(pkg/"out.txt").string()<<"\t0644\troot\troot\tdeadbeefdeadbeefdeadbeefdeadbeef\n";
@@ -84,11 +85,12 @@ TEST(InstallScript, RollsBackOnFailure){
     cleanupState();
     path pkg = temp_directory_path()/"pkg_rb"; remove_all(pkg);
     writeScript(pkg);
-    { std::ofstream(pkg/"a.txt")<<"newA"; }
-    { std::ofstream(pkg/"b.txt")<<"newB"; }
+    create_directories(pkg/"payload");
+    { std::ofstream(pkg/"payload"/"a.txt")<<"newA"; }
+    { std::ofstream(pkg/"payload"/"b.txt")<<"newB"; }
     path destA = pkg/"destA.txt"; { std::ofstream(destA)<<"oldA"; }
     path destB = pkg/"destB.txt"; // does not exist
-    std::string hashA = md5File(pkg/"a.txt");
+    std::string hashA = md5File(pkg/"payload"/"a.txt");
     std::ofstream manifest(pkg/"manifest.tsv");
     manifest<<"relpath\tdest\tmode\towner\tgroup\tmd5\n";
     manifest<<"a.txt\t"<<destA.string()<<"\t0644\troot\troot\t"<<hashA<<"\n";
