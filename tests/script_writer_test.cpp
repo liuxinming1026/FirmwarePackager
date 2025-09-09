@@ -18,22 +18,28 @@ TEST(ScriptWriterTest, GeneratesScriptsWithReplacements){
     path out = temp_directory_path()/"sw_out";
     remove_all(out);
 
-    // ScriptWriter expects templates/ under current working directory
+    // determine template root before changing working directory
+    auto tplRoot = current_path()/"FirmwarePackager/templates";
     auto cwd = current_path();
-    current_path("FirmwarePackager/FirmwarePackager");
+    path tmpCwd = temp_directory_path()/"sw_cwd";
+    remove_all(tmpCwd);
+    create_directories(tmpCwd);
+    current_path(tmpCwd);
+
     core::IdGenerator idGen;
     core::ScriptWriter writer;
     std::string pkgId = idGen.generate();
-    writer.write(project, out, pkgId);
+    writer.write(project, out, pkgId, tplRoot);
     current_path(cwd);
 
     EXPECT_TRUE(exists(out/"scripts/install.sh"));
     EXPECT_TRUE(exists(out/"scripts/recover_boot.sh"));
     EXPECT_TRUE(exists(out/"scripts/init/sysv/S95-upgrade-recover"));
 
-    std::ifstream in(out/"scripts/install.sh");
+    std::ifstream in(out/"scripts/install.sh", std::ios::binary);
     std::stringstream buffer; buffer << in.rdbuf();
     std::string content = buffer.str();
+    EXPECT_EQ(content.find('\r'), std::string::npos);
     EXPECT_NE(content.find(project.name), std::string::npos);
     EXPECT_NE(content.find(project.version), std::string::npos);
     EXPECT_NE(content.find(pkgId), std::string::npos);

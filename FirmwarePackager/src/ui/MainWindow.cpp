@@ -17,6 +17,7 @@
 #include <QTemporaryDir>
 #include <QDialogButtonBox>
 #include <QVBoxLayout>
+#include <QCoreApplication>
 #include <fstream>
 #include <vector>
 #include <iterator>
@@ -117,7 +118,8 @@ MainWindow::MainWindow(QWidget* parent)
     connect(editAct, &QAction::triggered, this, &MainWindow::editMapping);
 
     guiLogger = new GuiLogger(logPane);
-    packager = std::make_unique<core::Packager>(scanner, hasher, manifest, script, idGen, *guiLogger);
+    auto tplRoot = std::filesystem::path(QCoreApplication::applicationDirPath().toStdString()) / "templates";
+    packager = std::make_unique<core::Packager>(scanner, hasher, manifest, script, idGen, *guiLogger, tplRoot);
 }
 
 void MainWindow::newProject() {
