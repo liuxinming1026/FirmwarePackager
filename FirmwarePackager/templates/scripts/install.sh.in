@@ -76,6 +76,9 @@ write_state
 {
     read -r _header
     while IFS="$(printf '\t')" read -r rel dest mode owner group md5; do
+        if [ -z "$rel" ] || [ "${rel#\#}" != "$rel" ]; then
+            continue
+        fi
         LAST_FILE="$dest"
         write_state
 

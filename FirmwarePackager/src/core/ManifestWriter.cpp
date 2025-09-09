@@ -79,16 +79,6 @@ void ManifestWriter::write(const Project& project, const std::filesystem::path& 
                 }
             }
             std::sort(files.begin(), files.end(), [](const Rec& a, const Rec& b){ return a.rel < b.rel; });
-            std::string concat;
-            concat.reserve(files.size() * 32);
-            for (const auto& r : files) concat += r.hash;
-            std::string dirHash = md5String(concat);
-            out << f.path.generic_string() << '\t'
-                << f.dest.generic_string() << '\t'
-                << f.mode << '\t'
-                << f.owner << '\t'
-                << f.group << '\t'
-                << dirHash << '\n';
             for (const auto& r : files) {
                 out << r.rel.generic_string() << '\t'
                     << r.dest.generic_string() << '\t'
