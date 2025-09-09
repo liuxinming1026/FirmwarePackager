@@ -52,6 +52,10 @@ void cleanupState(){
 }
 }
 
+TEST(InstallScript, ContainsSyncCommand){
+    EXPECT_EQ(std::system("grep -q sync FirmwarePackager/templates/scripts/install.sh.in"), 0);
+}
+
 TEST(InstallScript, DetectsMd5Mismatch){
     cleanupState();
     path pkg = temp_directory_path()/"pkg_md5"; remove_all(pkg);

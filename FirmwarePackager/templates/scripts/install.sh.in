@@ -194,11 +194,14 @@ if [ "$STEP" = "install" ]; then
                 backup="$BACKUP_DIR/$dest"
                 mkdir -p "$(dirname "$backup")"
                 cp "$dest" "$backup"
+                sync
                 mv "$dest" "$dest.old"
+                sync
                 echo "BACKUP|$dest|$backup" >> "$JOURNAL"
             fi
 
             cp "$BASE_DIR/$rel" "$dest.new"
+            sync
             chmod "$mode" "$dest.new" 2>/dev/null || true
             if [ -n "$owner" ] && [ -n "$group" ]; then
                 chown "$owner:$group" "$dest.new" 2>/dev/null || true
@@ -206,11 +209,13 @@ if [ "$STEP" = "install" ]; then
             calc_new=$(md5sum "$dest.new" | awk '{print $1}')
             [ "$calc_new" = "$md5" ] || fail
             mv "$dest.new" "$dest"
+            sync
             calc_final=$(md5sum "$dest" | awk '{print $1}')
             [ "$calc_final" = "$md5" ] || fail
             echo "REPLACED|$dest|$backup" >> "$JOURNAL"
 
         done
+        sync
     } < "$BASE_DIR/manifest.tsv"
 fi
 
