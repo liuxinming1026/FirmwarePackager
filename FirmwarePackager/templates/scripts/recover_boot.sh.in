@@ -10,9 +10,9 @@ JOURNAL_DIR="/opt/upgrade/journal"
 for st in "$STATE_DIR"/*.state; do
     [ -e "$st" ] || continue
 
-    # Skip packages that finished successfully
+    # Skip packages that finished successfully or failed explicitly
     status=$(grep '^STATUS=' "$st" | cut -d= -f2)
-    if [ "$status" = "SUCCESS" ]; then
+    if [ "$status" = "SUCCESS" ] || [ "$status" = "FAIL" ]; then
         continue
     fi
 
