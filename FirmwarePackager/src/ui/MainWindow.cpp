@@ -24,7 +24,8 @@
 #include <filesystem>
 
 MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent), guiLogger(nullptr) {
+    : QMainWindow(parent), guiLogger(nullptr),
+      tplRoot(std::filesystem::path(QCoreApplication::applicationDirPath().toStdString()) / "templates") {
     setWindowTitle("Upgrade Builder");
 
     // file menu
@@ -118,7 +119,6 @@ MainWindow::MainWindow(QWidget* parent)
     connect(editAct, &QAction::triggered, this, &MainWindow::editMapping);
 
     guiLogger = new GuiLogger(logPane);
-    auto tplRoot = std::filesystem::path(QCoreApplication::applicationDirPath().toStdString()) / "templates";
     packager = std::make_unique<core::Packager>(scanner, hasher, manifest, script, idGen, *guiLogger, tplRoot);
 }
 
@@ -342,7 +342,7 @@ void MainWindow::previewScript() {
         return;
     }
     try {
-        script.write(currentProject, tempDir.path().toStdString(), idGen.generate());
+        script.write(currentProject, tempDir.path().toStdString(), idGen.generate(), tplRoot);
     } catch (const std::exception& e) {
         QMessageBox::critical(this, "Error", e.what());
         return;

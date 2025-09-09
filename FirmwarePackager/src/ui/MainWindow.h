@@ -10,6 +10,7 @@
 #include "src/core/ProjectModel.h"
 #include "src/core/ProjectSerializer.h"
 #include "GuiLogger.h"
+#include <filesystem>
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -46,6 +47,7 @@ private:
     core::ScriptWriter script;
     core::ProjectSerializer serializer;
     std::unique_ptr<core::Packager> packager;
+    std::filesystem::path tplRoot;
     core::Project currentProject;
 };
 
