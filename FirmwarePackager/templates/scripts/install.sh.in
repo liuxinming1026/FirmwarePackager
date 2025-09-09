@@ -16,6 +16,8 @@ BACKUP_DIR="/opt/upgrade/backup/${PKG_ID}"
 STATE_FILE="${STATE_DIR}/${PKG_ID}.state"
 JOURNAL="${STATE_DIR}/${PKG_ID}.journal"
 PKG_TGZ="${PKG_DIR}/${PKG_ID}.tar.gz"
+LOCK_DIR="/opt/upgrade/locks"
+LOCK_FILE="${LOCK_DIR}/upgrade.lock"
 
 STATUS="INIT"
 STEP=""
@@ -52,12 +54,27 @@ STATE
 
 rollback() {
     [ -f "$JOURNAL" ] || return 0
-    awk '{l[NR]=$0} END{for(i=NR;i>=1;i--) print l[i]}' "$JOURNAL" | while read f; do
-        if [ -f "$f.old" ]; then
-            mv "$f.old" "$f"
-        else
-            rm -f "$f"
-        fi
+    awk '{l[NR]=$0} END{for(i=NR;i>=1;i--) print l[i]}' "$JOURNAL" | \
+    while IFS="|" read -r action dest backup; do
+        case "$action" in
+            REPLACED)
+                if [ -n "$backup" ] && [ -f "$backup" ]; then
+                    mv "$backup" "$dest"
+                elif [ -f "$dest.old" ]; then
+                    mv "$dest.old" "$dest"
+                else
+                    rm -f "$dest"
+                fi
+                ;;
+            BACKUP)
+                if [ -n "$backup" ] && [ -f "$backup" ]; then
+                    mv "$backup" "$dest"
+                elif [ ! -e "$dest" ] && [ -f "$dest.old" ]; then
+                    mv "$dest.old" "$dest"
+                fi
+                rm -f "$dest.old"
+                ;;
+        esac
     done
 }
 
@@ -67,23 +84,37 @@ fail() {
     STEP="rollback"
     write_state
     rollback
+    flock -u 9 2>/dev/null || true
+    rm -f "$LOCK_FILE"
     exit 1
 }
 
 cleanup_success() {
-    if [ -f "$JOURNAL" ]; then
-        while read f; do
-            rm -f "$f.old"
-        done < "$JOURNAL"
+    if [ -f "$BASE_DIR/manifest.tsv" ]; then
+        {
+            read -r _header
+            while IFS="$(printf '\t')" read -r _rel dest _rest; do
+                if [ -n "$dest" ] && [ "${dest#\#}" = "$dest" ]; then
+                    rm -f "$dest.old"
+                fi
+            done
+        } < "$BASE_DIR/manifest.tsv"
     fi
-    rm -f "$JOURNAL"
+    rm -f "$JOURNAL" "$PKG_TGZ"
     rm -rf "$BACKUP_DIR"
+    flock -u 9 2>/dev/null || true
+    rm -f "$LOCK_FILE"
 }
 
 trap fail INT TERM HUP QUIT
 trap fail EXIT
 
-mkdir -p "$STATE_DIR" "$PKG_DIR" "$BACKUP_DIR"
+mkdir -p "$STATE_DIR" "$PKG_DIR" "$BACKUP_DIR" "$LOCK_DIR"
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+    echo "Another upgrade is in progress" >&2
+    exit 1
+fi
 
 if [ "$RESUME" -eq 1 ]; then
     [ -f "$STATE_FILE" ] || exit 1
@@ -127,17 +158,26 @@ if [ "$STEP" = "install" ]; then
             ddir=$(dirname "$dest")
             mkdir -p "$ddir"
 
+            backup=""
             if [ -f "$dest" ]; then
                 backup="$BACKUP_DIR/$dest"
                 mkdir -p "$(dirname "$backup")"
                 cp "$dest" "$backup"
                 mv "$dest" "$dest.old"
+                echo "BACKUP|$dest|$backup" >> "$JOURNAL"
             fi
 
             cp "$BASE_DIR/$rel" "$dest.new"
             chmod "$mode" "$dest.new" 2>/dev/null || true
+            if [ -n "$owner" ] && [ -n "$group" ]; then
+                chown "$owner:$group" "$dest.new" 2>/dev/null || true
+            fi
+            calc_new=$(md5sum "$dest.new" | awk '{print $1}')
+            [ "$calc_new" = "$md5" ] || fail
             mv "$dest.new" "$dest"
-            echo "$dest" >> "$JOURNAL"
+            calc_final=$(md5sum "$dest" | awk '{print $1}')
+            [ "$calc_final" = "$md5" ] || fail
+            echo "REPLACED|$dest|$backup" >> "$JOURNAL"
 
         done
     } < "$BASE_DIR/manifest.tsv"
