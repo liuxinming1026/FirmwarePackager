@@ -68,10 +68,10 @@ TEST(PackagerTest, GeneratesArchiveWithExpectedContents) {
     EXPECT_FALSE(exists(extractDir / "payload"));
     EXPECT_FALSE(exists(extractDir / "manifest.tsv"));
 
-    path payloadFile = packageDir / "payload" / "destdir" / "a.txt";
+    path payloadFile = packageDir / "payload" / "dir" / "a.txt";
     ASSERT_TRUE(exists(payloadFile));
-    EXPECT_FALSE(exists(packageDir / "payload" / "destdir" / "sub" / "b.txt"));
-    EXPECT_FALSE(exists(packageDir / "payload" / "destdir" / "exclude.txt"));
+    EXPECT_FALSE(exists(packageDir / "payload" / "dir" / "sub" / "b.txt"));
+    EXPECT_FALSE(exists(packageDir / "payload" / "dir" / "exclude.txt"));
     std::ifstream in(payloadFile); std::string data; std::getline(in, data); EXPECT_EQ(data, "data");
 
     path manifestPath = packageDir / "manifest.tsv";

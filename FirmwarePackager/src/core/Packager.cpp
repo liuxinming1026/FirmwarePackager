@@ -50,7 +50,7 @@ void Packager::package(const Project& project) {
 
     for (const auto& f : project.files) {
         auto src = project.rootDir / f.path;
-        auto destRoot = payloadDir / f.dest;
+        auto destRoot = payloadDir / f.path;
         if (f.recursive || std::filesystem::is_directory(src)) {
             if (!std::filesystem::exists(src)) continue;
             for (std::filesystem::recursive_directory_iterator it(src), end; it != end; ++it) {
@@ -69,7 +69,8 @@ void Packager::package(const Project& project) {
                     continue;
                 }
                 if (!it->is_regular_file()) continue;
-                auto dst = payloadDir / f.dest / relToDir;
+                auto relToRoot = std::filesystem::relative(it->path(), project.rootDir);
+                auto dst = payloadDir / relToRoot;
                 std::filesystem::create_directories(dst.parent_path());
                 std::filesystem::copy_file(it->path(), dst, std::filesystem::copy_options::overwrite_existing);
             }

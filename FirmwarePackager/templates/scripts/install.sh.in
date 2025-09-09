@@ -183,7 +183,7 @@ if [ "$STEP" = "install" ]; then
             LAST_FILE="$dest"
             write_state
 
-            calc=$(md5sum "$BASE_DIR/$rel" | awk '{print $1}')
+            calc=$(md5sum "$BASE_DIR/payload/$rel" | awk '{print $1}')
             [ "$calc" = "$md5" ] || fail
 
             ddir=$(dirname "$dest")
@@ -200,7 +200,7 @@ if [ "$STEP" = "install" ]; then
                 echo "BACKUP|$dest|$backup" >> "$JOURNAL"
             fi
 
-            cp "$BASE_DIR/$rel" "$dest.new"
+            cp "$BASE_DIR/payload/$rel" "$dest.new"
             sync
             chmod "$mode" "$dest.new" 2>/dev/null || true
             if [ -n "$owner" ] && [ -n "$group" ]; then
