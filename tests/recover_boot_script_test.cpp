@@ -15,7 +15,7 @@ TEST(RecoverBootScript, RunsInstallWithResumeAndKeepsState) {
 
     std::string id = "testpkg";
     path stateFile = stateDir / (id + ".state");
-    { std::ofstream(stateFile) << "STATUS=RUNNING\n"; }
+    { std::ofstream(stateFile) << "STEP=PREPARE\n"; }
 
     path temp = temp_directory_path() / "recover_pkg";
     remove_all(temp);
@@ -66,7 +66,7 @@ TEST(RecoverBootScript, SkipsFinishedInstallations) {
 
     std::string id = "testpkg";
     path stateFile = stateDir / (id + ".state");
-    { std::ofstream(stateFile) << "STATUS=SUCCESS\n"; }
+    { std::ofstream(stateFile) << "STEP=DONE\n"; }
 
     path temp = temp_directory_path() / "recover_pkg";
     remove_all(temp);
@@ -112,7 +112,7 @@ TEST(RecoverBootScript, SkipsFailedInstallations) {
 
     std::string id = "testpkg";
     path stateFile = stateDir / (id + ".state");
-    { std::ofstream(stateFile) << "STATUS=FAIL\n"; }
+    { std::ofstream(stateFile) << "STEP=FAILED\n"; }
 
     path temp = temp_directory_path() / "recover_pkg";
     remove_all(temp);
@@ -158,7 +158,7 @@ TEST(RecoverBootScript, LeavesTempDirOnInstallError) {
 
     std::string id = "testpkg";
     path stateFile = stateDir / (id + ".state");
-    { std::ofstream(stateFile) << "STATUS=RUNNING\n"; }
+    { std::ofstream(stateFile) << "STEP=PREPARE\n"; }
 
     path baseTmp = temp_directory_path() / "recover_pkg_err";
     remove_all(baseTmp);
