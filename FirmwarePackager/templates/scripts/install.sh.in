@@ -169,8 +169,11 @@ if [ "$STEP" = "install" ]; then
                 continue
             fi
             if [ "$SKIP" -eq 1 ]; then
-                [ "$dest" = "$LAST_FILE" ] && SKIP=0
-                continue
+                if [ "$dest" = "$LAST_FILE" ]; then
+                    SKIP=0
+                else
+                    continue
+                fi
             fi
             LAST_FILE="$dest"
             write_state
