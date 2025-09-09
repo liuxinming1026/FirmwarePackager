@@ -21,6 +21,7 @@ Packager::Packager(Scanner& s, Hasher& h, IManifestWriter& m,
 Project Packager::buildProject(const std::filesystem::path& root, const Scanner::PathList& exclusions) {
     Project project(root.filename().string());
     project.rootDir = root;
+    project.pkgId = idGen.generate();
     auto paths = scanner.scan(root, exclusions);
     for (const auto& p : paths) {
         std::ifstream in(p, std::ios::binary);
@@ -35,7 +36,7 @@ Project Packager::buildProject(const std::filesystem::path& root, const Scanner:
 
 void Packager::package(const Project& project) {
     logger.info("Packaging project");
-    std::string pkgId = idGen.generate();
+    std::string pkgId = project.pkgId.empty() ? idGen.generate() : project.pkgId;
     auto tempRoot = std::filesystem::temp_directory_path() / ("package-" + pkgId);
     std::filesystem::create_directories(tempRoot);
 

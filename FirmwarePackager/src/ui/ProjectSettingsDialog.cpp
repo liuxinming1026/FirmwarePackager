@@ -6,7 +6,8 @@
 #include <QFileDialog>
 #include <QHBoxLayout>
 
-ProjectSettingsDialog::ProjectSettingsDialog(const QString& root, const QString& output, QWidget* parent)
+ProjectSettingsDialog::ProjectSettingsDialog(const QString& root, const QString& output,
+                                             const QString& pkgId, QWidget* parent)
     : QDialog(parent) {
     setWindowTitle("Project Settings");
 
@@ -28,6 +29,9 @@ ProjectSettingsDialog::ProjectSettingsDialog(const QString& root, const QString&
     outLayout->addWidget(outBtn);
     layout->addRow("Output", outLayout);
 
+    pkgIdEdit = new QLineEdit(pkgId);
+    layout->addRow("Package ID", pkgIdEdit);
+
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -36,6 +40,7 @@ ProjectSettingsDialog::ProjectSettingsDialog(const QString& root, const QString&
 
 QString ProjectSettingsDialog::rootDir() const { return rootEdit->text(); }
 QString ProjectSettingsDialog::outputDir() const { return outputEdit->text(); }
+QString ProjectSettingsDialog::pkgId() const { return pkgIdEdit->text(); }
 
 void ProjectSettingsDialog::browseRoot() {
     QString dir = QFileDialog::getExistingDirectory(this, "Select Root Directory");

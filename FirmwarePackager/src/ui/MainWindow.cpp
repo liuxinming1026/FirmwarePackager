@@ -206,15 +206,19 @@ void MainWindow::buildPackage() {
 }
 
 void MainWindow::openSettings() {
-    ProjectSettingsDialog dlg(rootEdit->text(), outputEdit->text(), this);
+    ProjectSettingsDialog dlg(rootEdit->text(), outputEdit->text(),
+                              QString::fromStdString(currentProject.pkgId), this);
     if (dlg.exec() == QDialog::Accepted) {
         rootEdit->setText(dlg.rootDir());
         outputEdit->setText(dlg.outputDir());
         if (!dlg.rootDir().isEmpty()) {
             currentProject = packager->buildProject(dlg.rootDir().toStdString(), core::Scanner::PathList{});
             currentProject.outputDir = dlg.outputDir().toStdString();
-            populateTable(currentProject);
+        } else {
+            currentProject.outputDir = dlg.outputDir().toStdString();
         }
+        currentProject.pkgId = dlg.pkgId().toStdString();
+        populateTable(currentProject);
     }
 }
 

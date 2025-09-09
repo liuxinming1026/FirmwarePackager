@@ -24,6 +24,7 @@ struct FileEntry {
 struct Project {
     std::string name;                 // project/package name
     std::string version;              // package version
+    std::string pkgId;                // unique package identifier
     std::filesystem::path rootDir;    // project root directory
     std::filesystem::path outputDir;  // output directory
     std::vector<FileEntry> files;     // files included in project
