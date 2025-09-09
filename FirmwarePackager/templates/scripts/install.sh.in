@@ -36,6 +36,7 @@ STEP=""
 LAST_FILE=""
 STORE=""
 RESUME=0
+STATUS="IN_PROGRESS"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -60,6 +61,7 @@ STEP=$STEP
 JOURNAL=$JOURNAL_FILE
 PKG_TGZ=$PKG_TGZ
 LAST_FILE=$LAST_FILE
+STATUS=$STATUS
 STATE
 }
 
@@ -100,6 +102,7 @@ release_lock() {
 fail() {
     trap - EXIT
     STEP="FAILED"
+    STATUS="FAIL"
     write_state
     rollback
     release_lock
@@ -141,11 +144,13 @@ if [ "$RESUME" -eq 1 ]; then
         : > "$JOURNAL_FILE"
         STEP="PREPARE"
         LAST_FILE=""
+        STATUS="IN_PROGRESS"
         write_state
     fi
 else
     : > "$JOURNAL_FILE"
     STEP="PREPARE"
+    STATUS="IN_PROGRESS"
     write_state
 fi
 
@@ -241,6 +246,7 @@ fi
 trap - EXIT
 STEP="DONE"
 LAST_FILE=""
+STATUS="SUCCESS"
 write_state
 cleanup_success
 exit 0

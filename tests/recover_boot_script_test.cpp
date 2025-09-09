@@ -15,7 +15,7 @@ TEST(RecoverBootScript, RunsInstallWithResumeAndKeepsState) {
 
     std::string id = "testpkg";
     path stateFile = stateDir / (id + ".state");
-    { std::ofstream(stateFile) << "STEP=PREPARE\n"; }
+    { std::ofstream(stateFile) << "STEP=PREPARE\nSTATUS=IN_PROGRESS\n"; }
 
     path temp = temp_directory_path() / "recover_pkg";
     remove_all(temp);
@@ -66,7 +66,7 @@ TEST(RecoverBootScript, SkipsFinishedInstallations) {
 
     std::string id = "testpkg";
     path stateFile = stateDir / (id + ".state");
-    { std::ofstream(stateFile) << "STEP=DONE\n"; }
+    { std::ofstream(stateFile) << "STEP=DONE\nSTATUS=SUCCESS\n"; }
 
     path temp = temp_directory_path() / "recover_pkg";
     remove_all(temp);
@@ -102,7 +102,7 @@ TEST(RecoverBootScript, SkipsFinishedInstallations) {
     remove_all(stateDir);
 }
 
-TEST(RecoverBootScript, SkipsFailedInstallations) {
+TEST(RecoverBootScript, RetriesFailedInstallations) {
     path stateDir = "/opt/upgrade/state";
     path pkgDir = "/opt/upgrade/packages";
     remove_all(stateDir);
@@ -112,7 +112,7 @@ TEST(RecoverBootScript, SkipsFailedInstallations) {
 
     std::string id = "testpkg";
     path stateFile = stateDir / (id + ".state");
-    { std::ofstream(stateFile) << "STEP=FAILED\n"; }
+    { std::ofstream(stateFile) << "STEP=FAILED\nSTATUS=FAIL\n"; }
 
     path temp = temp_directory_path() / "recover_pkg";
     remove_all(temp);
@@ -140,7 +140,7 @@ TEST(RecoverBootScript, SkipsFailedInstallations) {
 
     ASSERT_EQ(std::system(script.string().c_str()), 0);
 
-    EXPECT_FALSE(exists("/tmp/install_called"));
+    EXPECT_TRUE(exists("/tmp/install_called"));
     remove("/tmp/install_called");
 
     remove_all(temp);
@@ -158,7 +158,7 @@ TEST(RecoverBootScript, LeavesTempDirOnInstallError) {
 
     std::string id = "testpkg";
     path stateFile = stateDir / (id + ".state");
-    { std::ofstream(stateFile) << "STEP=PREPARE\n"; }
+    { std::ofstream(stateFile) << "STEP=PREPARE\nSTATUS=IN_PROGRESS\n"; }
 
     path baseTmp = temp_directory_path() / "recover_pkg_err";
     remove_all(baseTmp);
