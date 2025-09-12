@@ -51,7 +51,7 @@ TEST(PackagerTest, GeneratesArchiveWithExpectedContents) {
     remove_all(tmpCwd);
     create_directories(tmpCwd);
     current_path(tmpCwd);
-    pack.package(project);
+    pack.package(&project);
     current_path(cwd);
 
     path archive = out / (project.name + ".tar.gz");

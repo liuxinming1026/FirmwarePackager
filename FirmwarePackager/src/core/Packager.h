@@ -14,8 +14,7 @@ namespace core {
 class IPackager {
 public:
     virtual ~IPackager() = default;
-    virtual Project buildProject(const std::filesystem::path& root, const Scanner::PathList& exclusions) = 0;
-    virtual void package(const Project& project) = 0;
+    virtual void package(const Project* project) = 0;
 };
 
 class Packager : public IPackager {
@@ -24,8 +23,7 @@ public:
              IScriptWriter& script, IIdGenerator& idGen, ILogger& logger,
              std::filesystem::path templateRoot);
 
-    Project buildProject(const std::filesystem::path& root, const Scanner::PathList& exclusions) override;
-    void package(const Project& project) override;
+    void package(const Project* project) override;
 
 private:
     Scanner& scanner;

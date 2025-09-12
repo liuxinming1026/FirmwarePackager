@@ -20,25 +20,9 @@ Packager::Packager(Scanner& s, Hasher& h, IManifestWriter& m,
     : scanner(s), hasher(h), manifest(m), script(sc), idGen(id), logger(log),
       templateRoot(std::move(tplRoot)) {}
 
-Project Packager::buildProject(const std::filesystem::path& root, const Scanner::PathList& exclusions) {
-    Project project(root.filename().string());
-    project.rootDir = root;
-    project.pkgId = idGen.generate();
-    auto paths = scanner.scan(root, exclusions);
-    for (const auto& p : paths) {
-        std::ifstream in(p, std::ios::binary);
-        std::vector<uint8_t> data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-        std::string hash = hasher.md5(data);
-        std::string id = idGen.generate();
-        auto rel = std::filesystem::relative(p, root);
-        project.files.emplace_back(rel, id, hash);
-    }
-    return project;
-}
-
-void Packager::package(const Project& project) {
+void Packager::package(const Project* project) {
     logger.info("Packaging project");
-    std::string pkgId = project.pkgId.empty() ? idGen.generate() : project.pkgId;
+    std::string pkgId = project->pkgId.empty() ? idGen.generate() : project->pkgId;
     auto tempRoot = std::filesystem::temp_directory_path() / ("package-" + pkgId);
     std::filesystem::create_directories(tempRoot);
 
@@ -48,8 +32,8 @@ void Packager::package(const Project& project) {
     std::filesystem::create_directories(payloadDir);
     std::filesystem::create_directories(metaDir);
 
-    for (const auto& f : project.files) {
-        auto src = project.rootDir / f.path;
+    for (const auto& f : project->files) {
+        auto src = project->rootDir / f.path;
         auto destRoot = payloadDir / f.path;
         if (f.recursive || std::filesystem::is_directory(src)) {
             if (!std::filesystem::exists(src)) continue;
@@ -69,7 +53,7 @@ void Packager::package(const Project& project) {
                     continue;
                 }
                 if (!it->is_regular_file()) continue;
-                auto relToRoot = std::filesystem::relative(it->path(), project.rootDir);
+                auto relToRoot = std::filesystem::relative(it->path(), project->rootDir);
                 auto dst = payloadDir / relToRoot;
                 std::filesystem::create_directories(dst.parent_path());
                 std::filesystem::copy_file(it->path(), dst, std::filesystem::copy_options::overwrite_existing);
@@ -81,16 +65,16 @@ void Packager::package(const Project& project) {
         }
     }
 
-    manifest.write(project, packageDir / "manifest.tsv");
-    script.write(project, packageDir, pkgId, templateRoot);
+    manifest.write(*project, packageDir / "manifest.tsv");
+    script.write(*project, packageDir, pkgId, templateRoot);
 
     auto now = std::chrono::system_clock::now();
     std::time_t t = std::chrono::system_clock::to_time_t(now);
 
     std::ofstream pkgInfo(metaDir / "pkg.info");
     pkgInfo << "PKG_ID=" << pkgId << "\n";
-    pkgInfo << "PKG_VERSION=" << project.version << "\n";
-    pkgInfo << "PKG_NAME=" << project.name << "\n";
+    pkgInfo << "PKG_VERSION=" << project->version << "\n";
+    pkgInfo << "PKG_NAME=" << project->name << "\n";
     pkgInfo << "CREATED_AT=" << std::put_time(std::gmtime(&t), "%Y-%m-%dT%H:%M:%SZ") << "\n";
     pkgInfo << "GENERATOR_VERSION=1.0\n";
 
@@ -107,8 +91,8 @@ void Packager::package(const Project& project) {
     buildInfo << "built=" << std::put_time(std::gmtime(&t), "%Y-%m-%dT%H:%M:%SZ") << "\n";
     buildInfo << "host=" << hostname << "\n";
 
-    std::filesystem::create_directories(project.outputDir);
-    std::filesystem::path archivePath = project.outputDir / (project.name + ".tar.gz");
+    std::filesystem::create_directories(project->outputDir);
+    std::filesystem::path archivePath = project->outputDir / (project->name + ".tar.gz");
     createArchive(packageDir, archivePath);
     std::filesystem::remove_all(tempRoot);
 }
@@ -159,4 +143,3 @@ void Packager::createArchive(const std::filesystem::path& dir, const std::filesy
 }
 
 } // namespace core
-

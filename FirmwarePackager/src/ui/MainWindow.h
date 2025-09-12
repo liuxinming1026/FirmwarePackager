@@ -32,6 +32,8 @@ private slots:
 
 private:
     void populateTable(const core::Project& project);
+    core::Project buildProject(const std::filesystem::path& root,
+                               const core::Scanner::PathList& exclusions = {});
 
     QTableView* tableView;
     QStandardItemModel* model;

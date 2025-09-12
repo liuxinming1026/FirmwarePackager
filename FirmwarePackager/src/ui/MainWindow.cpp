@@ -187,12 +187,29 @@ void MainWindow::populateTable(const core::Project& project) {
     }
 }
 
+core::Project MainWindow::buildProject(const std::filesystem::path& root,
+                                       const core::Scanner::PathList& exclusions) {
+    core::Project project(root.filename().string());
+    project.rootDir = root;
+    project.pkgId = idGen.generate();
+    auto paths = scanner.scan(root, exclusions);
+    for (const auto& p : paths) {
+        std::ifstream in(p, std::ios::binary);
+        std::vector<uint8_t> data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+        std::string hash = hasher.md5(data);
+        std::string id = idGen.generate();
+        auto rel = std::filesystem::relative(p, root);
+        project.files.emplace_back(rel, id, hash);
+    }
+    return project;
+}
+
 void MainWindow::openRoot() {
     QString dir = QFileDialog::getExistingDirectory(this, "Select Project Root");
     if (dir.isEmpty())
         return;
     rootEdit->setText(dir);
-    currentProject = packager->buildProject(dir.toStdString(), core::Scanner::PathList{});
+    currentProject = buildProject(dir.toStdString(), core::Scanner::PathList{});
     currentProject.outputDir = outputEdit->text().toStdString();
     populateTable(currentProject);
 }
@@ -204,7 +221,7 @@ void MainWindow::buildPackage() {
     }
     currentProject.rootDir = rootEdit->text().toStdString();
     currentProject.outputDir = outputEdit->text().toStdString();
-    packager->package(currentProject);
+    packager->package(&currentProject);
 }
 
 void MainWindow::openSettings() {
@@ -214,7 +231,7 @@ void MainWindow::openSettings() {
         rootEdit->setText(dlg.rootDir());
         outputEdit->setText(dlg.outputDir());
         if (!dlg.rootDir().isEmpty()) {
-            currentProject = packager->buildProject(dlg.rootDir().toStdString(), core::Scanner::PathList{});
+            currentProject = buildProject(dlg.rootDir().toStdString(), core::Scanner::PathList{});
             currentProject.outputDir = dlg.outputDir().toStdString();
         } else {
             currentProject.outputDir = dlg.outputDir().toStdString();
