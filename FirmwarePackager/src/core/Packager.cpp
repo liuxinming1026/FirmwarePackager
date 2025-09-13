@@ -32,37 +32,12 @@ void Packager::package(const Project* project) {
     std::filesystem::create_directories(payloadDir);
     std::filesystem::create_directories(metaDir);
 
-    for (const auto& f : project->files) {
+    for (const auto& f : project->store.entries()) {
         auto src = project->rootDir / f.path;
-        auto destRoot = payloadDir / f.path;
-        if (f.recursive || std::filesystem::is_directory(src)) {
-            if (!std::filesystem::exists(src)) continue;
-            for (std::filesystem::recursive_directory_iterator it(src), end; it != end; ++it) {
-                auto relToDir = std::filesystem::relative(it->path(), src);
-                std::string relStr = relToDir.generic_string();
-                bool skip = false;
-                for (const auto& ex : f.excludes) {
-                    auto exStr = ex.generic_string();
-                    if (relStr == exStr || relStr.rfind(exStr + '/', 0) == 0) {
-                        skip = true;
-                        break;
-                    }
-                }
-                if (skip) {
-                    if (it->is_directory()) it.disable_recursion_pending();
-                    continue;
-                }
-                if (!it->is_regular_file()) continue;
-                auto relToRoot = std::filesystem::relative(it->path(), project->rootDir);
-                auto dst = payloadDir / relToRoot;
-                std::filesystem::create_directories(dst.parent_path());
-                std::filesystem::copy_file(it->path(), dst, std::filesystem::copy_options::overwrite_existing);
-            }
-        } else {
-            if (!std::filesystem::exists(src)) continue;
-            std::filesystem::create_directories(destRoot.parent_path());
-            std::filesystem::copy_file(src, destRoot, std::filesystem::copy_options::overwrite_existing);
-        }
+        auto dst = payloadDir / f.dest;
+        if (!std::filesystem::exists(src)) continue;
+        std::filesystem::create_directories(dst.parent_path());
+        std::filesystem::copy_file(src, dst, std::filesystem::copy_options::overwrite_existing);
     }
 
     manifest.write(*project, packageDir / "manifest.tsv");

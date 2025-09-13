@@ -21,6 +21,16 @@ struct FileEntry {
     FileEntry(std::filesystem::path p, std::string i, std::string h);
 };
 
+struct FileStore {
+    explicit FileStore(std::vector<FileEntry>& files) : files(&files) {}
+
+    std::vector<FileEntry>& entries() { return *files; }
+    const std::vector<FileEntry>& entries() const { return *files; }
+
+private:
+    std::vector<FileEntry>* files;
+};
+
 struct Project {
     std::string name;                 // project/package name
     std::string version;              // package version
@@ -28,6 +38,7 @@ struct Project {
     std::filesystem::path rootDir;    // project root directory
     std::filesystem::path outputDir;  // output directory
     std::vector<FileEntry> files;     // files included in project
+    FileStore store;                  // file store interface
 
     Project();
     explicit Project(std::string name);

@@ -13,7 +13,7 @@ TEST(ScriptWriterTest, GeneratesScriptsWithReplacements){
     core::Project project;
     project.name = "demo";
     project.version = "1.0";
-    core::FileEntry fe; fe.path = "file1"; project.files.push_back(fe);
+    core::FileEntry fe; fe.path = "file1"; fe.dest = "file1"; project.store.entries().push_back(fe);
 
     path out = temp_directory_path()/"sw_out";
     remove_all(out);

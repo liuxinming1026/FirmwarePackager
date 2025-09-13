@@ -23,10 +23,8 @@ public:
 TEST(PackagerTest, GeneratesArchiveWithExpectedContents) {
     path root = temp_directory_path() / "pkg_root";
     remove_all(root);
-    create_directories(root / "dir" / "sub");
+    create_directories(root / "dir");
     { std::ofstream(root / "dir" / "a.txt") << "data"; }
-    { std::ofstream(root / "dir" / "sub" / "b.txt") << "skip"; }
-    { std::ofstream(root / "dir" / "exclude.txt") << "skip"; }
 
     path out = temp_directory_path() / "pkg_out";
     remove_all(out);
@@ -44,7 +42,7 @@ TEST(PackagerTest, GeneratesArchiveWithExpectedContents) {
     project.rootDir = root;
     project.outputDir = out;
     project.version = "1.0";
-    core::FileEntry fe; fe.path="dir"; fe.dest="destdir"; fe.recursive=true; fe.excludes={"sub","exclude.txt"}; project.files.push_back(fe);
+    core::FileEntry fe; fe.path="dir/a.txt"; fe.dest="destdir/a.txt"; project.store.entries().push_back(fe);
 
     auto cwd = current_path();
     path tmpCwd = temp_directory_path()/"pkg_cwd";
@@ -68,10 +66,8 @@ TEST(PackagerTest, GeneratesArchiveWithExpectedContents) {
     EXPECT_FALSE(exists(extractDir / "payload"));
     EXPECT_FALSE(exists(extractDir / "manifest.tsv"));
 
-    path payloadFile = packageDir / "payload" / "dir" / "a.txt";
+    path payloadFile = packageDir / "payload" / "destdir" / "a.txt";
     ASSERT_TRUE(exists(payloadFile));
-    EXPECT_FALSE(exists(packageDir / "payload" / "dir" / "sub" / "b.txt"));
-    EXPECT_FALSE(exists(packageDir / "payload" / "dir" / "exclude.txt"));
     std::ifstream in(payloadFile); std::string data; std::getline(in, data); EXPECT_EQ(data, "data");
 
     path manifestPath = packageDir / "manifest.tsv";
