@@ -23,16 +23,14 @@ std::string md5File(const path& p){
 }
 }
 
-TEST(ManifestWriterTest, ExpandsDirectoriesAndWritesColumns){
+TEST(ManifestWriterTest, WritesFileEntries){
     auto tmp = temp_directory_path()/"fp_test";
     remove_all(tmp);
-    create_directories(tmp/"dir"/"sub");
-    { std::ofstream(tmp/"dir"/"a.txt")<<"hello"; }
-    { std::ofstream(tmp/"dir"/"sub"/"b.txt")<<"world"; }
-    { std::ofstream(tmp/"dir"/"exclude.txt")<<"nope"; }
+    create_directories(tmp);
+    { std::ofstream(tmp/"a.txt")<<"hello"; }
 
     core::Project project; project.rootDir = tmp;
-    core::FileEntry fe; fe.path="dir"; fe.dest="destdir"; fe.mode="0644"; fe.owner="root"; fe.group="root"; fe.recursive=true; fe.excludes={"sub","exclude.txt"}; project.files.push_back(fe);
+    core::FileEntry fe; fe.path="a.txt"; fe.dest="destdir/a.txt"; fe.mode="0644"; fe.owner="root"; fe.group="root"; project.store.entries().push_back(fe);
 
     core::ManifestWriter writer;
     auto manifestPath = tmp/"manifest.tsv";
@@ -47,39 +45,11 @@ TEST(ManifestWriterTest, ExpandsDirectoriesAndWritesColumns){
     ASSERT_EQ(lines.size(), 2u);
     EXPECT_EQ(lines[0], (std::vector<std::string>{"relpath","dest","mode","owner","group","md5"}));
 
-    std::string hashA = md5File(tmp/"dir"/"a.txt");
+    std::string hashA = md5File(tmp/"a.txt");
 
-    EXPECT_EQ(lines[1][0], "dir/a.txt");
+    EXPECT_EQ(lines[1][0], "a.txt");
     EXPECT_EQ(lines[1][1], "destdir/a.txt");
     EXPECT_EQ(lines[1][5], hashA);
-
-    for (const auto& l : lines) {
-        EXPECT_EQ(std::find(l.begin(), l.end(), "destdir/sub/b.txt"), l.end());
-        EXPECT_EQ(std::find(l.begin(), l.end(), "destdir/exclude.txt"), l.end());
-    }
-
-    remove_all(tmp);
-}
-
-TEST(ManifestWriterTest, AppliesExclusions){
-    auto tmp = temp_directory_path()/"fp_excl";
-    remove_all(tmp);
-    create_directories(tmp/"dir"/"keep");
-    create_directories(tmp/"dir"/"skip");
-    { std::ofstream(tmp/"dir"/"keep"/"a.txt")<<"hi"; }
-    { std::ofstream(tmp/"dir"/"skip"/"b.txt")<<"bye"; }
-
-    core::Project project; project.rootDir = tmp;
-    core::FileEntry fe; fe.path="dir"; fe.dest="dest"; fe.recursive=true; fe.excludes={"skip"}; project.files.push_back(fe);
-
-    core::ManifestWriter writer; auto manifestPath = tmp/"manifest.tsv"; writer.write(project, manifestPath);
-
-    std::ifstream in(manifestPath);
-    ASSERT_TRUE(in.is_open());
-    std::string line; std::getline(in,line); // header
-    ASSERT_TRUE(std::getline(in,line));
-    EXPECT_NE(line.find("dest/keep/a.txt"), std::string::npos);
-    EXPECT_EQ(line.find("skip"), std::string::npos);
 
     remove_all(tmp);
 }

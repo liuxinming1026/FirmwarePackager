@@ -18,10 +18,10 @@ FileEntry::FileEntry(std::filesystem::path p, std::string i, std::string h)
 }
 
 Project::Project()
-    : pkgId("") {}
+    : pkgId(""), store(files) {}
 
 Project::Project(std::string name)
-    : name(std::move(name)), pkgId("") {}
+    : name(std::move(name)), pkgId(""), store(files) {}
 
 } // namespace core
 
