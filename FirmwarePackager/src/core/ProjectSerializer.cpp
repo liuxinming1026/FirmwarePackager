@@ -31,6 +31,7 @@ Project ProjectSerializer::load(const std::string& filePath) const {
             entry.mode = item.value("mode", "");
             entry.owner = item.value("owner", "");
             entry.group = item.value("group", "");
+            // Legacy flag; FileEntry itself represents a single file.
             entry.recursive = item.value("recursive", false);
             if (item.contains("excludes")) {
                 for (const auto& ex : item["excludes"])
@@ -38,8 +39,9 @@ Project ProjectSerializer::load(const std::string& filePath) const {
             }
             if (entry.mode.empty()) {
                 std::error_code ec;
-                bool isDir = entry.recursive ||
-                              std::filesystem::is_directory(project.rootDir / entry.path, ec);
+                bool isDir = std::filesystem::is_directory(project.rootDir / entry.path, ec);
+                // Directories are inferred from dest paths; mode is set based on
+                // whether the source path currently points to a directory.
                 entry.mode = isDir ? "0755" : "0644";
             }
             project.files.push_back(entry);
@@ -65,6 +67,7 @@ void ProjectSerializer::save(const Project& project, const std::string& filePath
         item["mode"] = file.mode;
         item["owner"] = file.owner;
         item["group"] = file.group;
+        // Legacy serialization field; FileEntry represents files only.
         item["recursive"] = file.recursive;
         json ex = json::array();
         for (const auto& e : file.excludes)

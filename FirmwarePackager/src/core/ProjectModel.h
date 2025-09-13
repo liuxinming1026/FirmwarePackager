@@ -6,6 +6,11 @@
 
 namespace core {
 
+/**
+ * Represents a single file included in the project.  Directories are not
+ * stored explicitly; they are inferred from the parent directories of
+ * `dest` when packaging.
+ */
 struct FileEntry {
     std::filesystem::path path;   // location on disk
     std::filesystem::path dest;   // destination inside package
@@ -14,17 +19,26 @@ struct FileEntry {
     std::string mode;             // file mode
     std::string owner;            // file owner
     std::string group;            // file group
-    bool recursive;               // whether to traverse directories
-    std::vector<std::filesystem::path> excludes; // paths to exclude
+    bool recursive;               // legacy flag used when expanding directories
+    std::vector<std::filesystem::path> excludes; // paths to exclude during expansion
 
     FileEntry();
     FileEntry(std::filesystem::path p, std::string i, std::string h);
 };
 
+/**
+ * Simple container managing FileEntry objects.  Only files are tracked; any
+ * required directories are implied by FileEntry::dest paths.
+ */
 struct FileStore {
     explicit FileStore(std::vector<FileEntry>& files) : files(&files) {}
 
+    /// Adds a file entry to the store.
+    void add(const FileEntry& entry) { files->push_back(entry); }
+
+    /// Returns the files currently in the store.
     std::vector<FileEntry>& entries() { return *files; }
+    /// Returns the files currently in the store (const overload).
     const std::vector<FileEntry>& entries() const { return *files; }
 
 private:
