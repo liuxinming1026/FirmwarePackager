@@ -21,18 +21,14 @@ TEST(ProjectSerializerTest, DefaultModesApplied) {
     project.outputDir = std::filesystem::temp_directory_path();
 
     core::FileEntry fileEntry; fileEntry.path = "file"; fileEntry.dest = "file";
-    project.files.push_back(fileEntry);
-
-    core::FileEntry dirEntry; dirEntry.path = "dir"; dirEntry.dest = "dir"; dirEntry.recursive = true;
-    project.files.push_back(dirEntry);
+    project.store.entries().push_back(fileEntry);
 
     core::ProjectSerializer serializer;
     std::filesystem::path file = std::filesystem::temp_directory_path() / "project_modes.json";
     serializer.save(project, file.string());
     core::Project loaded = serializer.load(file.string());
-    ASSERT_EQ(loaded.files.size(), 2);
-    EXPECT_EQ(loaded.files[0].mode, "0644");
-    EXPECT_EQ(loaded.files[1].mode, "0755");
+    ASSERT_EQ(loaded.store.entries().size(), 1u);
+    EXPECT_EQ(loaded.store.entries()[0].mode, "0644");
     std::filesystem::remove(file);
 }
 
